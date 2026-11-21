@@ -1,0 +1,280 @@
+/* ==========================================================================
+   CitiSense Admin — Possible Duplicates
+   ========================================================================== */
+
+.dup-summary {
+    padding: 12px 18px;
+    background: var(--cs-surface);
+    border: 1px solid var(--cs-border);
+    border-radius: var(--cs-radius-lg);
+    color: var(--cs-muted);
+}
+
+.dup-summary strong {
+    font-size: 24px;
+    color: var(--cs-navy);
+    margin-right: 4px;
+}
+
+/* "How does it work?" */
+
+.dup-help summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 20px;
+    font-weight: 600;
+    color: var(--cs-navy);
+    cursor: pointer;
+    list-style: none;
+}
+
+.dup-help summary::-webkit-details-marker {
+    display: none;
+}
+
+.dup-help summary i {
+    color: var(--cs-primary);
+    font-size: 18px;
+}
+
+.dup-help summary::after {
+    content: "Show";
+    margin-left: auto;
+    color: var(--cs-primary);
+    font-size: 15px;
+}
+
+.dup-help[open] summary::after {
+    content: "Hide";
+}
+
+.dup-help-body {
+    padding: 0 20px 18px 48px;
+    color: var(--cs-muted);
+}
+
+.dup-help-body ul {
+    margin: 8px 0 10px;
+    padding-left: 20px;
+}
+
+.dup-help-body li {
+    margin: 4px 0;
+}
+
+/* Groups */
+
+.dup-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.dup-group-header {
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--cs-border);
+    background: linear-gradient(90deg, var(--cs-primary-softer), transparent);
+    border-radius: var(--cs-radius-lg) var(--cs-radius-lg) 0 0;
+}
+
+.dup-group-header h2 {
+    font-size: 19px;
+}
+
+.dup-group-header p {
+    margin-top: 4px;
+    color: var(--cs-muted);
+    font-size: 15px;
+}
+
+.dup-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.dup-report {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--cs-border);
+}
+
+.dup-report:last-child {
+    border-bottom: 0;
+}
+
+.dup-report.is-main {
+    background: #fbfdff;
+    box-shadow: inset 4px 0 0 var(--cs-primary);
+}
+
+.dup-photo {
+    width: 96px;
+    height: 96px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border-radius: var(--cs-radius);
+    background: var(--cs-primary-soft);
+    color: var(--cs-primary);
+    font-size: 28px;
+}
+
+.dup-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.dup-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.dup-title-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    margin-bottom: 4px;
+}
+
+.dup-title-row h3 {
+    font-size: 17px;
+}
+
+.dup-main-tag {
+    flex-basis: 100%;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--cs-primary);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
+.dup-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.dup-line i {
+    margin-top: 2px;
+    color: var(--cs-primary);
+}
+
+.dup-meta {
+    font-size: 15px;
+    color: var(--cs-subtle);
+}
+
+.dup-description {
+    margin-top: 6px;
+    color: var(--cs-muted);
+    font-style: italic;
+}
+
+.dup-reasons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.dup-confidence,
+.dup-reason {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: var(--cs-radius-pill);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.dup-confidence {
+    background: var(--cs-pending-bg);
+    color: var(--cs-pending-text);
+}
+
+.dup-confidence.is-very-likely {
+    background: var(--cs-overdue-bg);
+    color: var(--cs-overdue-text);
+}
+
+.dup-confidence.is-possible {
+    background: #eef2f7;
+    color: var(--cs-muted);
+}
+
+.dup-reason {
+    background: var(--cs-surface-alt);
+    border: 1px solid var(--cs-border);
+    color: var(--cs-text);
+    font-weight: 500;
+}
+
+.dup-reason i {
+    color: var(--cs-resolved);
+}
+
+.dup-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    flex-shrink: 0;
+    min-width: 180px;
+}
+
+@media (max-width: 1100px) {
+    .dup-report {
+        flex-wrap: wrap;
+    }
+
+    .dup-info {
+        flex-basis: calc(100% - 112px);
+    }
+
+    .dup-actions {
+        flex-direction: row;
+        flex-wrap: wrap;
+        width: 100%;
+        min-width: 0;
+        padding-left: 112px;
+    }
+}
+
+@media (max-width: 640px) {
+    .dup-report {
+        padding: 16px;
+    }
+
+    .dup-photo {
+        width: 64px;
+        height: 64px;
+    }
+
+    .dup-info {
+        flex-basis: calc(100% - 80px);
+    }
+
+    .dup-actions {
+        padding-left: 0;
+    }
+
+    .dup-actions .cs-btn {
+        flex: 1 1 auto;
+    }
+
+    .dup-help-body {
+        padding-left: 20px;
+    }
+}

@@ -1,0 +1,201 @@
+/* ==========================================================================
+   CitiSense Admin — Duplicate Reports (legacy duplicate_report.php)
+   This page is not linked from the navigation; duplicates are now reviewed in
+   the Reports page drawer. Styled here so it stays consistent if opened.
+   ========================================================================== */
+
+.duplicate-header h1 {
+    font-size: 32px;
+}
+
+.duplicate-header p {
+    margin-top: 6px;
+    font-size: 17px;
+    color: var(--cs-muted);
+}
+
+.duplicate-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+}
+
+.summary-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    background: var(--cs-surface);
+    border: 1px solid var(--cs-border);
+    border-radius: var(--cs-radius-lg);
+    box-shadow: var(--cs-shadow);
+}
+
+.summary-icon {
+    width: 48px;
+    height: 48px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--cs-primary-soft);
+    color: var(--cs-primary);
+    font-size: 22px;
+}
+
+.summary-card span {
+    display: block;
+    color: var(--cs-muted);
+}
+
+.summary-card strong {
+    display: block;
+    font-size: 24px;
+    color: var(--cs-navy);
+}
+
+.summary-card small {
+    color: var(--cs-subtle);
+}
+
+.duplicate-list-card {
+    background: var(--cs-surface);
+    border: 1px solid var(--cs-border);
+    border-radius: var(--cs-radius-lg);
+    box-shadow: var(--cs-shadow);
+}
+
+.duplicate-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--cs-border);
+}
+
+.duplicate-card-header h2 {
+    font-size: 20px;
+}
+
+.duplicate-card-header p {
+    color: var(--cs-subtle);
+}
+
+.submission-count {
+    padding: 5px 12px;
+    border-radius: var(--cs-radius-pill);
+    background: var(--cs-primary-soft);
+    color: var(--cs-primary-hover);
+    font-weight: 700;
+}
+
+.submission-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.submission-card {
+    display: flex;
+    gap: 18px;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--cs-border);
+}
+
+.submission-card:last-child {
+    border-bottom: 0;
+}
+
+.submission-image {
+    width: 140px;
+    height: 110px;
+    flex-shrink: 0;
+    overflow: hidden;
+    border-radius: var(--cs-radius);
+    background: var(--cs-primary-soft);
+}
+
+.submission-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.no-image {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: var(--cs-primary);
+}
+
+.submission-details {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.submission-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.submission-top h3 {
+    font-size: 18px;
+}
+
+.report-id,
+.submission-top time {
+    font-size: 15px;
+    color: var(--cs-subtle);
+}
+
+.reporter-info {
+    display: flex;
+    gap: 10px;
+}
+
+.reporter-info i {
+    font-size: 22px;
+    color: var(--cs-primary);
+}
+
+.reporter-info span {
+    display: block;
+    font-size: 15px;
+    color: var(--cs-muted);
+}
+
+.submission-description p {
+    margin-top: 4px;
+    color: var(--cs-text);
+}
+
+.submission-location {
+    display: flex;
+    gap: 8px;
+    color: var(--cs-muted);
+}
+
+.empty-duplicates {
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--cs-muted);
+}
+
+@media (max-width: 640px) {
+    .submission-card {
+        flex-direction: column;
+        padding: 18px;
+    }
+
+    .submission-image {
+        width: 100%;
+        height: 180px;
+    }
+}

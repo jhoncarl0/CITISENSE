@@ -1,0 +1,328 @@
+/* ==========================================================================
+   CitiSense Admin — Dashboard
+   Shared layout, sidebar and components live in citisense.css.
+   ========================================================================== */
+
+/* Welcome (mirrors the mobile Home greeting) ------------------------------- */
+
+.dash-welcome {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.dash-welcome .cs-location-chip {
+    margin: 0 0 14px;
+}
+
+.dash-greeting {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--cs-muted);
+}
+
+.dash-welcome h1 {
+    font-size: 44px;
+    font-weight: 700;
+    letter-spacing: -0.6px;
+}
+
+.dash-subtitle {
+    margin-top: 6px;
+    font-size: 17px;
+    color: var(--cs-muted);
+}
+
+.dash-mascot {
+    width: 200px;
+    flex-shrink: 0;
+}
+
+/* Call to action (the mobile "Report an Issue" card) ----------------------- */
+
+.dash-cta {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 24px 28px;
+    border-radius: var(--cs-radius-lg);
+    background: linear-gradient(135deg, #2f6df0 0%, #1d4ed8 100%);
+    color: #fff;
+    box-shadow: 0 12px 30px rgba(37, 99, 235, 0.25);
+}
+
+.dash-cta-icon {
+    width: 60px;
+    height: 60px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    border: 2px solid rgba(255, 255, 255, 0.7);
+    border-radius: 50%;
+    font-size: 26px;
+}
+
+.dash-cta-text {
+    flex: 1;
+}
+
+.dash-cta h2 {
+    color: #fff;
+    font-size: 23px;
+}
+
+.dash-cta p {
+    margin-top: 4px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 17px;
+}
+
+.dash-cta-button {
+    background: #fff;
+    color: var(--cs-primary-hover);
+}
+
+.dash-cta-button:hover {
+    background: var(--cs-primary-soft);
+}
+
+/* Sections ----------------------------------------------------------------- */
+
+.dash-section-title {
+    margin-bottom: 14px;
+    font-size: 21px;
+}
+
+.dash-stats {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.dash-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+}
+
+.dash-side {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Latest reports ----------------------------------------------------------- */
+
+.dash-report-list {
+    list-style: none;
+    margin: 0;
+    padding: 8px 12px;
+}
+
+.dash-report-list li + li {
+    border-top: 1px solid var(--cs-border);
+}
+
+.dash-report-list a {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 12px;
+    border-radius: var(--cs-radius);
+    color: inherit;
+    text-decoration: none;
+}
+
+.dash-report-list a:hover {
+    background: var(--cs-primary-softer);
+}
+
+.dash-report-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.dash-report-text strong {
+    color: var(--cs-navy);
+}
+
+.dash-report-text span {
+    color: var(--cs-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dash-report-text small {
+    font-size: 14px;
+    color: var(--cs-subtle);
+}
+
+/* Categories --------------------------------------------------------------- */
+
+.dash-category-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.dash-category-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.dash-category-row span {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+}
+
+.dash-category-row span i {
+    color: var(--cs-primary);
+}
+
+.dash-category-row strong {
+    color: var(--cs-navy);
+}
+
+.dash-category-row small {
+    color: var(--cs-subtle);
+    font-weight: 500;
+}
+
+.dash-bar {
+    height: 10px;
+    border-radius: var(--cs-radius-pill);
+    background: var(--cs-primary-soft);
+    overflow: hidden;
+}
+
+.dash-bar span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--cs-primary);
+}
+
+/* Map ---------------------------------------------------------------------- */
+
+.dash-map-wrap {
+    padding: 16px;
+}
+
+.dash-map {
+    height: 280px;
+    border-radius: var(--cs-radius);
+    overflow: hidden;
+    background: var(--cs-surface-alt);
+}
+
+.dash-map.is-unavailable,
+.heatmap-map.is-unavailable {
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    color: var(--cs-muted);
+    text-align: center;
+}
+
+.dash-map-legend {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+    font-size: 14px;
+    color: var(--cs-subtle);
+}
+
+.dash-map-gradient {
+    flex: 1;
+    height: 10px;
+    border-radius: var(--cs-radius-pill);
+    background: linear-gradient(90deg, #00c853, #ffff00, #ff9800, #ff5722, #ff0000);
+}
+
+/* Responsive --------------------------------------------------------------- */
+
+@media (max-width: 1280px) {
+    .dash-stats {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
+    .dash-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dash-side {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 860px) {
+    .dash-side {
+        grid-template-columns: 1fr;
+    }
+
+    .dash-cta {
+        flex-wrap: wrap;
+    }
+
+    .dash-cta-button {
+        width: 100%;
+    }
+}
+
+@media (max-width: 640px) {
+    .dash-mascot {
+        width: 120px;
+    }
+
+    .dash-welcome h1 {
+        font-size: 34px;
+    }
+
+    .dash-greeting {
+        font-size: 18px;
+    }
+
+    .dash-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .dash-stats .cs-stat:first-child {
+        grid-column: span 2;
+    }
+
+    .dash-cta {
+        padding: 20px;
+    }
+
+    .dash-cta-icon {
+        display: none;
+    }
+
+    .dash-report-list a {
+        flex-wrap: wrap;
+    }
+
+    .dash-report-text {
+        flex: 1 1 calc(100% - 62px);
+    }
+
+    .dash-report-text span {
+        white-space: normal;
+    }
+
+    .dash-report-list .cs-badge {
+        margin-left: 62px;
+    }
+}

@@ -1,0 +1,386 @@
+/* ==========================================================================
+   CitiSense Admin — Login page
+   Mirrors the mobile app's "Welcome back to CitiSense" screen.
+   ========================================================================== */
+
+.login-body {
+    background: var(--cs-surface);
+}
+
+.login-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    min-height: 100vh;
+}
+
+/* Brand panel */
+
+.login-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    padding: 48px;
+    background: linear-gradient(160deg, #2f6df0 0%, #1d4ed8 100%);
+    color: #fff;
+    text-align: center;
+}
+
+.login-brand-badge {
+    display: block;
+    width: 100%;
+    border-radius: 50%;
+    box-shadow: 0 20px 50px rgba(8, 25, 80, 0.35);
+}
+
+.login-brand h2 {
+    max-width: 460px;
+    color: #fff;
+    font-size: 38px;
+    font-weight: 700;
+}
+
+.login-brand h2 span {
+    color: #fcd34d;
+}
+
+.login-brand p {
+    max-width: 440px;
+    font-size: 18px;
+    color: rgba(255, 255, 255, 0.88);
+}
+
+/* Form panel */
+
+.login-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 440px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.login-mascot {
+    display: block;
+    width: 190px;
+}
+
+.login-mascot-small {
+    display: none;
+    align-self: center;
+}
+
+.login-card h1 {
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+}
+
+.login-card h1 span {
+    color: var(--cs-primary);
+}
+
+.login-intro {
+    margin-top: -10px;
+    font-size: 17px;
+    color: var(--cs-muted);
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.login-form .cs-input {
+    min-height: 56px;
+    font-size: 17px;
+}
+
+.login-password .cs-input {
+    padding-right: 104px;
+}
+
+.login-toggle-password {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--cs-primary);
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.login-toggle-password:hover {
+    background: var(--cs-primary-softer);
+}
+
+.login-submit {
+    min-height: 56px;
+    margin-top: 6px;
+    font-size: 18px;
+}
+
+.login-help {
+    display: flex;
+    gap: 8px;
+    color: var(--cs-subtle);
+    font-size: 15px;
+}
+
+.login-help i {
+    margin-top: 2px;
+}
+
+/* Tablet and phone: single column, mascot on top like the mobile app */
+
+@media (max-width: 900px) {
+    .login-page {
+        grid-template-columns: 1fr;
+    }
+
+    .login-brand {
+        display: none;
+    }
+
+    .login-mascot-small {
+        display: flex;
+    }
+
+    .login-card {
+        text-align: center;
+    }
+
+    .login-card .cs-field,
+    .login-help,
+    .login-card .cs-alert {
+        text-align: left;
+    }
+}
+
+@media (max-width: 480px) {
+    .login-card h1 {
+        font-size: 28px;
+    }
+
+    .login-mascot {
+        width: 150px;
+    }
+}
+
+/* ==========================================================================
+   Mascot animation
+   Calm and light: a slow float, a soft entrance, a small cursor tilt on the
+   big badge and short reactions (nod, look away, hop, shake). All motion is
+   switched off by the global prefers-reduced-motion rule in citisense.css.
+   ========================================================================== */
+
+.login-mascot-stage,
+.login-mascot-small {
+    --tilt-x: 0deg;
+    --tilt-y: 0deg;
+    position: relative;
+    perspective: 900px;
+    animation: login-mascot-enter 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.login-mascot-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: min(300px, 60%);
+}
+
+.login-mascot-small {
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Floating layer */
+.login-mascot-float {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    animation: login-mascot-float 5.5s ease-in-out 0.9s infinite;
+}
+
+/* The picture itself: tilt + reactions */
+[data-mascot] {
+    transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
+    transform-origin: 50% 85%;
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), filter 0.4s ease;
+    will-change: transform;
+}
+
+/* Soft ground shadow that follows the float */
+.login-mascot-shadow {
+    width: 56%;
+    height: 14px;
+    margin-top: 16px;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(8, 25, 80, 0.32), transparent);
+    animation: login-mascot-shadow 5.5s ease-in-out 0.9s infinite;
+}
+
+.login-mascot-small .login-mascot-shadow {
+    width: 46%;
+    height: 10px;
+    margin-top: 6px;
+    background: radial-gradient(closest-side, rgba(15, 23, 42, 0.16), transparent);
+}
+
+/* Glowing halo behind the big badge */
+.login-mascot-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 120%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(252, 211, 77, 0.28), rgba(252, 211, 77, 0) 70%);
+    transform: translate(-50%, -54%);
+    animation: login-mascot-glow 5.5s ease-in-out 0.9s infinite;
+    pointer-events: none;
+}
+
+/* Three small sparkles drifting around the badge */
+.login-sparkle {
+    position: absolute;
+    z-index: 2;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #fde68a;
+    box-shadow: 0 0 12px rgba(253, 230, 138, 0.9);
+    opacity: 0;
+    animation: login-sparkle 4.8s ease-in-out infinite;
+    pointer-events: none;
+}
+
+.login-sparkle.s1 { top: 8%;  left: 2%;  animation-delay: 1.2s; }
+.login-sparkle.s2 { top: 22%; right: -2%; width: 7px; height: 7px; animation-delay: 2.8s; }
+.login-sparkle.s3 { bottom: 22%; left: -4%; width: 6px; height: 6px; animation-delay: 4s; }
+
+/* Moods set by login.php */
+.is-shy [data-mascot] {
+    transform: rotateX(var(--tilt-x)) rotateY(calc(var(--tilt-y) - 14deg)) rotate(-4deg) scale(0.97);
+}
+
+.is-busy .login-mascot-float {
+    animation-duration: 1.6s;
+}
+
+/* One-off reactions */
+[data-mascot].is-nod   { animation: login-mascot-nod 0.7s ease-in-out; }
+[data-mascot].is-hop   { animation: login-mascot-hop 0.65s cubic-bezier(0.3, 0, 0.3, 1); }
+[data-mascot].is-shake { animation: login-mascot-shake 0.65s ease-in-out; }
+
+/* Gentle hover for anyone who points at the badge */
+.login-mascot-stage:hover [data-mascot] {
+    filter: brightness(1.04) saturate(1.05);
+}
+
+/* Small spinner inside the Log In button */
+.login-spinner {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border-width: 3px;
+    border-color: rgba(255, 255, 255, 0.4);
+    border-top-color: #fff;
+    vertical-align: -3px;
+    margin-right: 6px;
+}
+
+.login-submit:disabled {
+    opacity: 0.85;
+    cursor: progress;
+}
+
+/* Form fades in just after the mascot */
+.login-card > h1,
+.login-card > .login-intro,
+.login-card > .cs-alert,
+.login-card > .login-form,
+.login-card > .login-help,
+.login-brand h2,
+.login-brand p {
+    animation: login-fade-up 0.6s ease both;
+}
+
+.login-card > h1,
+.login-brand h2 { animation-delay: 0.15s; }
+.login-card > .login-intro,
+.login-brand p { animation-delay: 0.25s; }
+.login-card > .cs-alert { animation-delay: 0.3s; }
+.login-card > .login-form { animation-delay: 0.35s; }
+.login-card > .login-help { animation-delay: 0.45s; }
+
+@keyframes login-mascot-enter {
+    from { opacity: 0; transform: translateY(18px) scale(0.92); }
+    to   { opacity: 1; transform: none; }
+}
+
+@keyframes login-mascot-float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-10px); }
+}
+
+@keyframes login-mascot-shadow {
+    0%, 100% { transform: scaleX(1);    opacity: 1; }
+    50%      { transform: scaleX(0.82); opacity: 0.65; }
+}
+
+@keyframes login-mascot-glow {
+    0%, 100% { opacity: 0.75; transform: translate(-50%, -54%) scale(0.96); }
+    50%      { opacity: 1;    transform: translate(-50%, -56%) scale(1.03); }
+}
+
+@keyframes login-sparkle {
+    0%, 100% { opacity: 0; transform: translateY(6px) scale(0.6); }
+    40%      { opacity: 1; transform: translateY(-4px) scale(1); }
+    70%      { opacity: 0; transform: translateY(-12px) scale(0.7); }
+}
+
+@keyframes login-mascot-nod {
+    0%, 100% { transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y)); }
+    35%      { transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) rotate(-5deg) translateY(2px); }
+    70%      { transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) rotate(3deg); }
+}
+
+@keyframes login-mascot-hop {
+    0%   { transform: translateY(0) scale(1); }
+    25%  { transform: translateY(3px) scale(1.03, 0.96); }
+    55%  { transform: translateY(-16px) scale(0.98, 1.03); }
+    80%  { transform: translateY(0) scale(1.02, 0.98); }
+    100% { transform: translateY(0) scale(1); }
+}
+
+@keyframes login-mascot-shake {
+    0%, 100% { transform: translateX(0) rotate(0); }
+    20%      { transform: translateX(-7px) rotate(-3deg); }
+    40%      { transform: translateX(6px) rotate(2.5deg); }
+    60%      { transform: translateX(-4px) rotate(-1.5deg); }
+    80%      { transform: translateX(2px) rotate(0.5deg); }
+}
+
+@keyframes login-fade-up {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+}

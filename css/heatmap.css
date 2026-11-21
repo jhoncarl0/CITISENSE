@@ -1,0 +1,138 @@
+/* ==========================================================================
+   CitiSense Admin — Issue Map (heatmap.php)
+   ========================================================================== */
+
+.heatmap-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 20px;
+    align-items: start;
+}
+
+.heatmap-map-wrap {
+    padding: 16px 16px 0;
+}
+
+.heatmap-map {
+    height: 560px;
+    border-radius: var(--cs-radius);
+    overflow: hidden;
+    background: var(--cs-surface-alt);
+}
+
+.heatmap-map.is-unavailable {
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    color: var(--cs-muted);
+    text-align: center;
+}
+
+.heatmap-legend {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    padding: 16px 24px 20px;
+}
+
+.heatmap-legend ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.heatmap-legend li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--cs-muted);
+}
+
+.legend-swatch {
+    width: 22px;
+    height: 14px;
+    border-radius: 4px;
+}
+
+.legend-swatch.very-low { background: #00c853; }
+.legend-swatch.low { background: #ffff00; border: 1px solid #e5d800; }
+.legend-swatch.moderate { background: #ff9800; }
+.legend-swatch.high { background: #ff0000; }
+
+/* Places list */
+
+.heatmap-place-list {
+    list-style: none;
+    margin: 0;
+    padding: 8px 16px 16px;
+}
+
+.heatmap-place-list li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 4px;
+}
+
+.heatmap-place-list li + li {
+    border-top: 1px solid var(--cs-border);
+}
+
+.heatmap-rank {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--cs-primary-soft);
+    color: var(--cs-primary);
+    font-weight: 700;
+}
+
+.heatmap-place-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.heatmap-place-text strong {
+    color: var(--cs-navy);
+    line-height: 1.3;
+}
+
+.heatmap-place-text > span {
+    margin-top: 2px;
+    font-size: 15px;
+    color: var(--cs-subtle);
+}
+
+.heatmap-open {
+    color: var(--cs-overdue-text);
+    font-weight: 600;
+}
+
+@media (max-width: 1200px) {
+    .heatmap-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .heatmap-map {
+        height: 460px;
+    }
+}
+
+@media (max-width: 640px) {
+    .heatmap-map {
+        height: 360px;
+    }
+
+    .heatmap-legend {
+        padding: 14px 18px 18px;
+    }
+}

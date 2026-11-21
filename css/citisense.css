@@ -1,0 +1,1659 @@
+/* ==========================================================================
+   CitiSense Admin — Shared Design System
+   --------------------------------------------------------------------------
+   Visual language adapted from the CitiSense mobile app (UI_Mobile):
+   royal blue primary, deep navy headings, slate body text, a pale blue-grey
+   page background, white rounded cards, Roboto type and pill status badges.
+
+   Every admin page loads this file first. Page stylesheets only add the few
+   rules that are unique to that page.
+
+   Contents
+     1. Tokens          8. Badges & chips       15. Toast
+     2. Base            9. Alerts               16. Empty / loading states
+     3. App layout     10. Tables               17. Stat tiles
+     4. Sidebar        11. Pagination           18. Utilities
+     5. Page header    12. Modals               19. Responsive
+     6. Cards          13. Drawer
+     7. Buttons/forms  14. Tooltips
+   ========================================================================== */
+
+/* 1. TOKENS ================================================================ */
+
+:root {
+    /* Brand (sampled from the mobile app) */
+    --cs-primary: #2563eb;
+    --cs-primary-hover: #1d4ed8;
+    --cs-primary-soft: #e8f0fe;
+    --cs-primary-softer: #f3f7ff;
+
+    /* Text */
+    --cs-navy: #0f1e46;
+    --cs-text: #1e293b;
+    --cs-muted: #4b5a73;
+    --cs-subtle: #5d6b80;
+
+    /* Surfaces */
+    --cs-bg: #f4f7fc;
+    --cs-surface: #ffffff;
+    --cs-surface-alt: #f8fafd;
+    --cs-border: #e2e8f0;
+    --cs-border-strong: #cbd5e1;
+
+    /* Status — always paired with a text label, never colour alone */
+    --cs-pending: #b45309;
+    --cs-pending-text: #92400e;
+    --cs-pending-bg: #fef3c7;
+    --cs-progress: #2563eb;
+    --cs-progress-text: #1e40af;
+    --cs-progress-bg: #dbeafe;
+    --cs-resolved: #16a34a;
+    --cs-resolved-text: #166534;
+    --cs-resolved-bg: #dcfce7;
+    --cs-overdue: #dc2626;
+    --cs-overdue-text: #991b1b;
+    --cs-overdue-bg: #fee2e2;
+
+    --cs-danger: #dc2626;
+    --cs-danger-hover: #b91c1c;
+    --cs-success: #16a34a;
+
+    /* Shape */
+    --cs-radius-sm: 10px;
+    --cs-radius: 14px;
+    --cs-radius-lg: 20px;
+    --cs-radius-pill: 999px;
+
+    /* Elevation (kept soft, like the mobile cards) */
+    --cs-shadow-sm: 0 1px 2px rgba(15, 30, 70, 0.05);
+    --cs-shadow: 0 1px 2px rgba(15, 30, 70, 0.04), 0 6px 20px rgba(15, 30, 70, 0.05);
+    --cs-shadow-lg: 0 20px 50px rgba(15, 30, 70, 0.18);
+
+    /* Type */
+    --cs-font: "Roboto", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+
+    /* Layout */
+    --cs-sidebar-width: 264px;
+    --cs-control-height: 48px;
+    --cs-focus: 0 0 0 3px rgba(37, 99, 235, 0.35);
+}
+
+/* 2. BASE ================================================================== */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+    font-family: var(--cs-font);
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--cs-text);
+    background: var(--cs-bg);
+    -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, p {
+    margin: 0;
+}
+
+h1, h2, h3, h4 {
+    color: var(--cs-navy);
+    line-height: 1.25;
+}
+
+a {
+    color: var(--cs-primary);
+}
+
+img {
+    max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+    color: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+:focus-visible {
+    outline: none;
+    box-shadow: var(--cs-focus);
+}
+
+.cs-sr-only {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.cs-skip-link {
+    position: absolute;
+    left: 16px;
+    top: -60px;
+    z-index: 1000;
+    padding: 12px 18px;
+    border-radius: var(--cs-radius-sm);
+    background: var(--cs-primary);
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.cs-skip-link:focus {
+    top: 16px;
+}
+
+body.cs-no-scroll {
+    overflow: hidden;
+}
+
+/* 3. APP LAYOUT ============================================================ */
+
+.cs-main {
+    margin-left: var(--cs-sidebar-width);
+    min-height: 100vh;
+    padding: 32px 40px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.cs-main > * {
+    min-width: 0;
+}
+
+.cs-container {
+    width: 100%;
+    max-width: 1440px;
+}
+
+/* 4. SIDEBAR =============================================================== */
+
+.cs-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 60;
+    width: var(--cs-sidebar-width);
+    display: flex;
+    flex-direction: column;
+    background: var(--cs-surface);
+    border-right: 1px solid var(--cs-border);
+    overflow: hidden;
+}
+
+.cs-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 22px 22px 18px;
+    text-decoration: none;
+}
+
+.cs-brand img {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+}
+
+.cs-brand-name {
+    display: block;
+    font-size: 23px;
+    font-weight: 700;
+    color: var(--cs-primary);
+    letter-spacing: -0.2px;
+    line-height: 1.1;
+}
+
+.cs-brand-sub {
+    display: block;
+    margin-top: 3px;
+    font-size: 14px;
+    color: var(--cs-subtle);
+}
+
+/* Only the menu itself scrolls (rarely needed); the scrollbar track is
+   hidden so no grey line appears between the menu and the page. */
+.cs-nav {
+    flex: 1;
+    min-height: 0;
+    padding: 8px 14px 16px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+}
+
+.cs-nav::-webkit-scrollbar {
+    display: none;
+}
+
+.cs-sidebar-footer {
+    flex-shrink: 0;
+}
+
+.cs-nav-label {
+    margin: 18px 12px 8px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--cs-subtle);
+}
+
+.cs-nav-label:first-child {
+    margin-top: 4px;
+}
+
+.cs-nav-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-height: 50px;
+    padding: 0 14px;
+    margin-bottom: 4px;
+    border-radius: var(--cs-radius);
+    color: var(--cs-muted);
+    font-size: 16px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+}
+
+.cs-nav-item i {
+    width: 22px;
+    font-size: 20px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.cs-nav-item:hover {
+    background: var(--cs-surface-alt);
+    color: var(--cs-navy);
+}
+
+.cs-nav-item.is-active {
+    background: var(--cs-primary-soft);
+    color: var(--cs-primary);
+    font-weight: 700;
+}
+
+.cs-nav-item.is-active::before {
+    content: "";
+    position: absolute;
+    left: -14px;
+    top: 10px;
+    bottom: 10px;
+    width: 4px;
+    border-radius: 0 4px 4px 0;
+    background: var(--cs-primary);
+}
+
+.cs-nav-count {
+    margin-left: auto;
+    min-width: 28px;
+    padding: 2px 8px;
+    border-radius: var(--cs-radius-pill);
+    background: var(--cs-overdue-bg);
+    color: var(--cs-overdue-text);
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.cs-sidebar-footer {
+    padding: 14px;
+    border-top: 1px solid var(--cs-border);
+}
+
+.cs-account {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 8px 12px;
+}
+
+.cs-avatar {
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--cs-primary-soft);
+    color: var(--cs-primary);
+    font-weight: 700;
+}
+
+.cs-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.cs-account-name {
+    display: block;
+    font-weight: 700;
+    color: var(--cs-navy);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cs-account-role {
+    display: block;
+    font-size: 14px;
+    color: var(--cs-subtle);
+}
+
+.cs-account > div {
+    min-width: 0;
+}
+
+.cs-logout {
+    width: 100%;
+    color: var(--cs-muted);
+}
+
+/* Mobile top bar (hidden on desktop) */
+
+.cs-topbar {
+    display: none;
+}
+
+.cs-sidebar-backdrop {
+    display: none;
+}
+
+/* 5. PAGE HEADER =========================================================== */
+
+.cs-page-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.cs-page-header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+}
+
+.cs-page-header p {
+    margin-top: 6px;
+    max-width: 720px;
+    font-size: 17px;
+    color: var(--cs-muted);
+}
+
+.cs-page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.cs-location-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 6px 14px 6px 10px;
+    border-radius: var(--cs-radius-pill);
+    background: var(--cs-surface);
+    border: 1px solid var(--cs-border);
+    color: var(--cs-navy);
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.cs-location-chip i {
+    color: var(--cs-primary);
+}
+
+.cs-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.cs-back-link:hover {
+    text-decoration: underline;
+}
+
+/* 6. CARDS ================================================================= */
+
+.cs-card {
+    background: var(--cs-surface);
+    border: 1px solid var(--cs-border);
+    border-radius: var(--cs-radius-lg);
+    box-shadow: var(--cs-shadow);
+}
+
+.cs-card-body {
+    padding: 24px;
+}
+
+.cs-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--cs-border);
+}
+
+.cs-card-header h2 {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.cs-card-header p {
+    margin-top: 2px;
+    color: var(--cs-subtle);
+    font-size: 15px;
+}
+
+.cs-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 16px 24px;
+    border-top: 1px solid var(--cs-border);
+    color: var(--cs-subtle);
+    font-size: 15px;
+}
+
+.cs-section-title {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--cs-subtle);
+}
+
+.cs-icon-circle {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--cs-primary-soft);
+    color: var(--cs-primary);
+    font-size: 22px;
+}
+
+/* 7. BUTTONS & FORMS ======================================================= */
+
+.cs-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: var(--cs-control-height);
+    padding: 0 20px;
+    border: 1.5px solid transparent;
+    border-radius: var(--cs-radius);
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.cs-btn i {
+    font-size: 18px;
+}
+
+.cs-btn:disabled,
+.cs-btn[aria-disabled="true"] {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.cs-btn-primary {
+    background: var(--cs-primary);
+    color: #fff;
+}
+
+.cs-btn-primary:hover:not(:disabled) {
+    background: var(--cs-primary-hover);
+}
+
+.cs-btn-secondary {
+    background: var(--cs-surface);
+    border-color: var(--cs-primary);
+    color: var(--cs-primary);
+}
+
+.cs-btn-secondary:hover:not(:disabled) {
+    background: var(--cs-primary-softer);
+}
+
+.cs-btn-ghost {
+    background: var(--cs-surface);
+    border-color: var(--cs-border-strong);
+    color: var(--cs-text);
+}
+
+.cs-btn-ghost:hover:not(:disabled) {
+    background: var(--cs-surface-alt);
+    border-color: var(--cs-subtle);
+}
+
+.cs-btn-danger {
+    background: var(--cs-danger);
+    color: #fff;
+}
+
+.cs-btn-danger:hover:not(:disabled) {
+    background: var(--cs-danger-hover);
+}
+
+.cs-btn-danger-outline {
+    background: var(--cs-surface);
+    border-color: #f1b4b4;
+    color: var(--cs-danger);
+}
+
+.cs-btn-danger-outline:hover:not(:disabled) {
+    background: #fff5f5;
+}
+
+.cs-btn-sm {
+    min-height: 40px;
+    padding: 0 14px;
+    font-size: 15px;
+    border-radius: var(--cs-radius-sm);
+}
+
+.cs-btn-block {
+    width: 100%;
+}
+
+.cs-icon-btn {
+    width: 44px;
+    height: 44px;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid var(--cs-border);
+    border-radius: 12px;
+    background: var(--cs-surface);
+    color: var(--cs-muted);
+    font-size: 18px;
+}
+
+.cs-icon-btn:hover {
+    background: var(--cs-surface-alt);
+    color: var(--cs-navy);
+}
+
+.cs-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.cs-label {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--cs-navy);
+}
+
+.cs-hint {
+    font-size: 14px;
+    color: var(--cs-subtle);
+}
+
+.cs-input,
+.cs-select,
+.cs-textarea {
+    width: 100%;
+    min-height: var(--cs-control-height);
+    padding: 0 14px;
+    border: 1.5px solid #d8e0ec;
+    border-radius: var(--cs-radius);
+    background: var(--cs-surface);
+    color: var(--cs-text);
+    font-size: 16px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.cs-textarea {
+    padding: 12px 14px;
+    min-height: 120px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.cs-select {
+    appearance: none;
+    padding-right: 42px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 16 16' fill='%234b5a73'%3E%3Cpath d='M1.6 4.6a.75.75 0 0 1 1.06 0L8 9.94l5.34-5.34a.75.75 0 1 1 1.06 1.06l-5.87 5.87a.75.75 0 0 1-1.06 0L1.6 5.66a.75.75 0 0 1 0-1.06Z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    cursor: pointer;
+}
+
+.cs-input::placeholder,
+.cs-textarea::placeholder {
+    color: #6b7689;
+}
+
+.cs-input:hover,
+.cs-select:hover,
+.cs-textarea:hover {
+    border-color: var(--cs-border-strong);
+}
+
+.cs-input:focus,
+.cs-select:focus,
+.cs-textarea:focus {
+    outline: none;
+    border-color: var(--cs-primary);
+    box-shadow: var(--cs-focus);
+}
+
+.cs-input[readonly] {
+    background: var(--cs-surface-alt);
+    color: var(--cs-muted);
+}
+
+.cs-input-icon {
+    position: relative;
+}
+
+.cs-input-icon > i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--cs-subtle);
+    font-size: 18px;
+    pointer-events: none;
+}
+
+.cs-input-icon .cs-input {
+    padding-left: 46px;
+}
+
+.cs-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+/* 8. BADGES & CHIPS ======================================================== */
+
+.cs-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: var(--cs-radius-pill);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+    background: #eef2f7;
+    color: var(--cs-muted);
+}
+
+.cs-badge::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+}
+
+.cs-badge.no-dot::before {
+    display: none;
+}
+
+.cs-badge i {
+    font-size: 14px;
+}
+
+.cs-badge.has-icon::before {
+    display: none;
+}
+
+.cs-badge-pending {
+    background: var(--cs-pending-bg);
+    color: var(--cs-pending-text);
+}
+
+.cs-badge-in-progress {
+    background: var(--cs-progress-bg);
+    color: var(--cs-progress-text);
+}
+
+.cs-badge-resolved {
+    background: var(--cs-resolved-bg);
+    color: var(--cs-resolved-text);
+}
+
+.cs-badge-overdue {
+    background: var(--cs-overdue-bg);
+    color: var(--cs-overdue-text);
+}
+
+.cs-badge-rejected {
+    background: #f1f5f9;
+    color: #475569;
+    box-shadow: inset 0 0 0 1px #cbd5e1;
+}
+
+.cs-badge-neutral {
+    background: #eef2f7;
+    color: var(--cs-muted);
+}
+
+.cs-badge-info {
+    background: var(--cs-primary-soft);
+    color: var(--cs-primary-hover);
+}
+
+.cs-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 0 8px 0 14px;
+    border-radius: var(--cs-radius-pill);
+    background: var(--cs-primary-soft);
+    color: var(--cs-primary-hover);
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.cs-chip i {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    font-size: 13px;
+}
+
+.cs-chip:hover i {
+    background: rgba(37, 99, 235, 0.15);
+}
+
+/* 9. ALERTS ================================================================ */
+
+.cs-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: var(--cs-radius);
+    border: 1px solid transparent;
+    font-size: 16px;
+}
+
+.cs-alert > i {
+    font-size: 20px;
+    line-height: 1.2;
+    flex-shrink: 0;
+}
+
+.cs-alert-body {
+    flex: 1;
+}
+
+.cs-alert-title {
+    display: block;
+    font-weight: 700;
+}
+
+.cs-alert-success {
+    background: #effcf3;
+    border-color: #bbe7c8;
+    color: var(--cs-resolved-text);
+}
+
+.cs-alert-error {
+    background: #fff5f5;
+    border-color: #f7c7c7;
+    color: var(--cs-overdue-text);
+}
+
+.cs-alert-warning {
+    background: #fffbeb;
+    border-color: #fde3a7;
+    color: var(--cs-pending-text);
+}
+
+.cs-alert-info {
+    background: var(--cs-primary-softer);
+    border-color: #cfdcf8;
+    color: var(--cs-progress-text);
+}
+
+.cs-alert-close {
+    margin: -6px -6px -6px 0;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: inherit;
+    font-size: 16px;
+}
+
+.cs-alert-close:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+/* 10. TABLES =============================================================== */
+
+.cs-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.cs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 16px;
+}
+
+.cs-table th {
+    padding: 14px 20px;
+    background: var(--cs-surface-alt);
+    border-bottom: 1px solid var(--cs-border);
+    color: var(--cs-muted);
+    font-size: 14px;
+    font-weight: 700;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.cs-table td {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--cs-border);
+    vertical-align: middle;
+}
+
+.cs-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.cs-table tbody tr {
+    transition: background 0.12s;
+}
+
+.cs-table tbody tr:hover {
+    background: var(--cs-primary-softer);
+}
+
+.cs-table .cs-col-actions {
+    text-align: right;
+    width: 1%;
+    white-space: nowrap;
+}
+
+.cs-cell-strong {
+    font-weight: 700;
+    color: var(--cs-navy);
+}
+
+.cs-cell-sub {
+    display: block;
+    margin-top: 2px;
+    font-size: 14px;
+    color: var(--cs-subtle);
+}
+
+/* 11. PAGINATION =========================================================== */
+
+.cs-pagination {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.cs-page-btn {
+    min-width: 44px;
+    height: 44px;
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid var(--cs-border);
+    border-radius: 12px;
+    background: var(--cs-surface);
+    color: var(--cs-text);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.cs-page-btn:hover {
+    border-color: var(--cs-primary);
+    color: var(--cs-primary);
+}
+
+.cs-page-btn.is-active {
+    background: var(--cs-primary);
+    border-color: var(--cs-primary);
+    color: #fff;
+}
+
+.cs-page-btn.is-disabled {
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+/* 12. MODALS =============================================================== */
+
+.cs-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(15, 30, 70, 0.45);
+}
+
+.cs-modal.is-open {
+    display: flex;
+}
+
+.cs-modal-dialog {
+    width: 100%;
+    max-width: 560px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    background: var(--cs-surface);
+    border-radius: var(--cs-radius-lg);
+    box-shadow: var(--cs-shadow-lg);
+    animation: cs-pop 0.16s ease-out;
+}
+
+.cs-modal-sm .cs-modal-dialog {
+    max-width: 440px;
+}
+
+.cs-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 24px 24px 0;
+}
+
+.cs-modal-header h2 {
+    font-size: 22px;
+}
+
+.cs-modal-header p {
+    margin-top: 6px;
+    color: var(--cs-muted);
+}
+
+.cs-modal-body {
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.cs-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 0 24px 24px;
+}
+
+.cs-confirm-icon {
+    width: 56px;
+    height: 56px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 14px;
+    border-radius: 50%;
+    background: var(--cs-primary-soft);
+    color: var(--cs-primary);
+    font-size: 26px;
+}
+
+.cs-confirm-icon.is-danger {
+    background: var(--cs-overdue-bg);
+    color: var(--cs-danger);
+}
+
+@keyframes cs-pop {
+    from { transform: translateY(8px) scale(0.98); opacity: 0; }
+    to { transform: none; opacity: 1; }
+}
+
+/* 13. DRAWER =============================================================== */
+
+.cs-drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    background: rgba(15, 30, 70, 0.4);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+}
+
+.cs-drawer-backdrop.is-open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.cs-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 160;
+    width: min(620px, 100%);
+    display: flex;
+    flex-direction: column;
+    background: var(--cs-bg);
+    box-shadow: var(--cs-shadow-lg);
+    transform: translateX(100%);
+    visibility: hidden;
+    transition: transform 0.25s ease, visibility 0.25s;
+}
+
+.cs-drawer.is-open {
+    transform: none;
+    visibility: visible;
+}
+
+.cs-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 20px;
+    background: var(--cs-surface);
+    border-bottom: 1px solid var(--cs-border);
+}
+
+.cs-drawer-header h2 {
+    font-size: 20px;
+}
+
+.cs-drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+/* 14. TOOLTIPS ============================================================= */
+
+[data-tooltip] {
+    position: relative;
+}
+
+[data-tooltip]:hover::after,
+[data-tooltip]:focus-visible::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 30;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: var(--cs-navy);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* 15. TOAST ================================================================ */
+
+.cs-toast-region {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 300;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: min(420px, calc(100vw - 32px));
+}
+
+.cs-toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: var(--cs-radius);
+    background: var(--cs-navy);
+    color: #fff;
+    font-size: 16px;
+    box-shadow: var(--cs-shadow-lg);
+    animation: cs-pop 0.18s ease-out;
+}
+
+.cs-toast i {
+    font-size: 20px;
+    line-height: 1.2;
+}
+
+.cs-toast-success i {
+    color: #4ade80;
+}
+
+.cs-toast-error {
+    background: #7f1d1d;
+}
+
+.cs-toast-error i {
+    color: #fecaca;
+}
+
+/* 16. EMPTY / LOADING STATES ============================================== */
+
+.cs-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 8px;
+    padding: 48px 24px;
+    color: var(--cs-muted);
+}
+
+.cs-empty-icon {
+    width: 72px;
+    height: 72px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 6px;
+    border-radius: 50%;
+    background: var(--cs-primary-soft);
+    color: var(--cs-primary);
+    font-size: 30px;
+}
+
+.cs-empty h3 {
+    font-size: 19px;
+}
+
+.cs-empty p {
+    max-width: 420px;
+}
+
+.cs-empty .cs-btn {
+    margin-top: 10px;
+}
+
+.cs-spinner {
+    width: 36px;
+    height: 36px;
+    border: 4px solid var(--cs-primary-soft);
+    border-top-color: var(--cs-primary);
+    border-radius: 50%;
+    animation: cs-spin 0.8s linear infinite;
+}
+
+.cs-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 60px 20px;
+    color: var(--cs-muted);
+}
+
+@keyframes cs-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* 17. STAT TILES =========================================================== */
+
+.cs-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 16px;
+}
+
+.cs-stat {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    background: var(--cs-surface);
+    border: 1px solid var(--cs-border);
+    border-radius: var(--cs-radius-lg);
+    box-shadow: var(--cs-shadow);
+    color: inherit;
+    text-decoration: none;
+    text-align: left;
+}
+
+a.cs-stat,
+button.cs-stat {
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.15s;
+}
+
+a.cs-stat:hover,
+button.cs-stat:hover {
+    border-color: var(--cs-primary);
+}
+
+.cs-stat.is-selected {
+    border-color: var(--cs-primary);
+    box-shadow: 0 0 0 2px var(--cs-primary) inset, var(--cs-shadow);
+}
+
+.cs-stat-value {
+    display: block;
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--cs-navy);
+}
+
+.cs-stat-label {
+    display: block;
+    margin-top: 2px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--cs-muted);
+}
+
+.cs-stat-hint {
+    display: block;
+    font-size: 14px;
+    color: var(--cs-subtle);
+}
+
+.cs-tone-pending { background: var(--cs-pending-bg); color: var(--cs-pending); }
+.cs-tone-in-progress { background: var(--cs-progress-bg); color: var(--cs-progress); }
+.cs-tone-resolved { background: var(--cs-resolved-bg); color: var(--cs-resolved); }
+.cs-tone-overdue { background: var(--cs-overdue-bg); color: var(--cs-overdue); }
+.cs-tone-primary { background: var(--cs-primary-soft); color: var(--cs-primary); }
+
+/* Shown in place of a photo whose file is missing */
+.cs-photo-missing {
+    width: 100%;
+    height: 100%;
+    min-height: inherit;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: var(--cs-subtle);
+    font-size: 15px;
+    text-align: center;
+}
+
+.cs-photo-missing i {
+    font-size: 24px;
+}
+
+.rp-photo .cs-photo-missing {
+    min-height: 140px;
+    background: var(--cs-surface-alt);
+}
+
+/* Maps: gestures over a map zoom the map, not the page */
+.leaflet-container,
+.dash-map,
+.heatmap-map {
+    touch-action: none;
+    overscroll-behavior: contain;
+}
+
+/* 18. UTILITIES ============================================================ */
+
+.cs-muted { color: var(--cs-muted); }
+.cs-subtle { color: var(--cs-subtle); }
+.cs-nowrap { white-space: nowrap; }
+.cs-stack { display: flex; flex-direction: column; gap: 16px; }
+.cs-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+.cs-footer {
+    margin-top: auto;
+    padding-top: 16px;
+    text-align: center;
+    color: var(--cs-subtle);
+    font-size: 14px;
+}
+
+.cs-footer strong {
+    color: var(--cs-primary);
+}
+
+.cs-noscript-warning {
+    padding: 12px 16px;
+    background: var(--cs-pending-bg);
+    color: var(--cs-pending-text);
+    text-align: center;
+    font-weight: 600;
+}
+
+/* 19. RESPONSIVE =========================================================== */
+
+@media (max-height: 940px) and (min-width: 1025px) {
+    .cs-brand {
+        padding: 16px 22px 10px;
+    }
+
+    .cs-brand img {
+        width: 46px;
+        height: 46px;
+    }
+
+    .cs-nav-label {
+        margin: 12px 12px 4px;
+    }
+
+    .cs-nav-item {
+        min-height: 44px;
+        margin-bottom: 2px;
+    }
+
+    .cs-account {
+        padding: 2px 8px 8px;
+    }
+
+    .cs-sidebar-footer {
+        padding: 10px 14px;
+    }
+
+    .cs-logout {
+        min-height: 42px;
+    }
+}
+
+@media (max-height: 760px) and (min-width: 1025px) {
+    .cs-nav-label {
+        display: none;
+    }
+
+    .cs-nav {
+        padding-top: 4px;
+    }
+}
+
+@media (max-width: 1280px) {
+    .cs-main {
+        padding: 28px 28px 20px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .cs-topbar {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 16px;
+        background: var(--cs-surface);
+        border-bottom: 1px solid var(--cs-border);
+    }
+
+    .cs-topbar .cs-brand {
+        padding: 0;
+    }
+
+    .cs-topbar .cs-brand img {
+        width: 40px;
+        height: 40px;
+    }
+
+    .cs-topbar .cs-brand-name {
+        font-size: 20px;
+    }
+
+    .cs-sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        box-shadow: none;
+    }
+
+    .cs-sidebar.is-open {
+        transform: none;
+        box-shadow: var(--cs-shadow-lg);
+    }
+
+    .cs-sidebar-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 55;
+        background: rgba(15, 30, 70, 0.4);
+    }
+
+    .cs-sidebar-backdrop.is-open {
+        display: block;
+    }
+
+    .cs-main {
+        margin-left: 0;
+        padding: 24px 20px 20px;
+    }
+
+    .cs-page-header h1 {
+        font-size: 28px;
+    }
+}
+
+@media (max-width: 640px) {
+    .cs-main {
+        padding: 20px 14px 16px;
+        gap: 18px;
+    }
+
+    .cs-page-header h1 {
+        font-size: 26px;
+    }
+
+    .cs-page-header p {
+        font-size: 16px;
+    }
+
+    .cs-page-actions,
+    .cs-page-actions .cs-btn {
+        width: 100%;
+    }
+
+    .cs-card-body,
+    .cs-card-header {
+        padding: 18px;
+    }
+
+    .cs-card-footer {
+        padding: 14px 18px;
+    }
+
+    .cs-stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .cs-stat {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 16px;
+    }
+
+    .cs-stat-value {
+        font-size: 26px;
+    }
+
+    .cs-modal {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .cs-modal-dialog {
+        max-height: 92vh;
+        border-radius: var(--cs-radius-lg) var(--cs-radius-lg) 0 0;
+    }
+
+    .cs-modal-footer .cs-btn {
+        flex: 1;
+    }
+
+    .cs-toast-region {
+        left: 16px;
+        right: 16px;
+        bottom: 16px;
+    }
+
+    /* Tables that opt in become stacked cards on phones */
+    .cs-table-stack thead {
+        display: none;
+    }
+
+    .cs-table-stack,
+    .cs-table-stack tbody,
+    .cs-table-stack tr,
+    .cs-table-stack td {
+        display: block;
+        width: 100%;
+    }
+
+    .cs-table-stack tr {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--cs-border);
+    }
+
+    .cs-table-stack tbody tr:last-child {
+        border-bottom: 0;
+    }
+
+    .cs-table-stack td {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 6px 0;
+        border: 0;
+        text-align: right;
+    }
+
+    .cs-table-stack td::before {
+        content: attr(data-label);
+        flex-shrink: 0;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--cs-subtle);
+        text-align: left;
+    }
+
+    .cs-table-stack td[data-label=""]::before {
+        display: none;
+    }
+
+    .cs-table-stack .cs-col-actions {
+        width: 100%;
+        text-align: left;
+    }
+
+    .cs-table-stack .cs-col-actions .cs-btn {
+        width: 100%;
+    }
+}
+
+/* Page mascots: a soft entrance, then a slow float; a small wave on hover */
+.dash-mascot,
+.ann-mascot,
+.set-mascot,
+.msg-placeholder-mascot {
+    transform-origin: 50% 90%;
+    animation: cs-mascot-enter 0.8s cubic-bezier(0.22, 1, 0.36, 1) both,
+               cs-mascot-float 6s ease-in-out 0.8s infinite;
+}
+
+.dash-mascot:hover,
+.ann-mascot:hover,
+.set-mascot:hover,
+.msg-placeholder-mascot:hover {
+    animation: cs-mascot-wave 0.9s ease-in-out;
+}
+
+@keyframes cs-mascot-enter {
+    from { opacity: 0; transform: translateY(14px) scale(0.94); }
+    to   { opacity: 1; transform: none; }
+}
+
+@keyframes cs-mascot-float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-6px); }
+}
+
+@keyframes cs-mascot-wave {
+    0%, 100% { transform: rotate(0); }
+    25%      { transform: rotate(-4deg); }
+    55%      { transform: rotate(3deg); }
+    80%      { transform: rotate(-1.5deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* Softer count for "Possible Duplicates" (suggestions, not urgent work) */
+.cs-nav-count.is-soft {
+    background: var(--cs-pending-bg);
+    color: var(--cs-pending-text);
+}
