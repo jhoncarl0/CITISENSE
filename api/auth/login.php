@@ -1,8 +1,8 @@
 <?php
-require_once __DIR__ . '/../../config/database.php';
 
-echo "Database connection successful!";
-exit;
+session_start();
+
+require_once __DIR__ . "/../../config/database.php";
 
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     header("Location: ../../admin/login.php");
