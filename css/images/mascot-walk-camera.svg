@@ -1,0 +1,599 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-44 0 448 380" role="img" aria-label="CitiSense mascot walking in and taking a photo">
+  <!--
+    CitiSense mascot: walk-and-snap loop (13s, generated, every part returns to its start pose).
+      0.0s  walks in from the left with small, bouncy steps
+      3.5s  lifts a phone and snaps a photo (soft flash)
+      5.3s  happy closed eyes, a little hop and a "captured" check
+      6.4s  lowers the phone, rests and blinks
+      8.0s  walks back to the left, then rests until the loop restarts
+    The background stays still apart from a slow cloud drift.
+    Everything stops (mascot centred, phone hidden) for users who prefer reduced motion.
+  -->
+  <defs>
+    <radialGradient id="cs-body" cx="38%" cy="30%" r="75%">
+      <stop offset="0" stop-color="#6aa8f4"/>
+      <stop offset="0.55" stop-color="#3a78e6"/>
+      <stop offset="1" stop-color="#2356cc"/>
+    </radialGradient>
+    <linearGradient id="cs-limb" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3f7ce8"/>
+      <stop offset="1" stop-color="#2a5fd6"/>
+    </linearGradient>
+    <linearGradient id="cs-shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3b7cf0"/>
+      <stop offset="1" stop-color="#2155cf"/>
+    </linearGradient>
+    <clipPath id="cs-mouth-clip">
+      <path d="M164 236 Q180 240 196 236 Q194 257 180 257 Q166 257 164 236 Z"/>
+    </clipPath>
+  </defs>
+
+  <style>
+    .cs-anim {
+      transform-box: view-box;
+      animation-duration: 13s;
+      animation-iteration-count: infinite;
+      animation-timing-function: ease-in-out;
+    }
+    .cs-walk     { animation-name: cs-walk; animation-timing-function: linear; }
+    .cs-bob      { animation-name: cs-bob; }
+    .cs-shadow   { animation-name: cs-shadow; transform-origin: 180px 362px; }
+    .cs-foot-l   { animation-name: cs-foot-l; }
+    .cs-foot-r   { animation-name: cs-foot-r; }
+    .cs-tilt     { animation-name: cs-tilt; transform-origin: 180px 345px; }
+    .cs-arm-r    { animation-name: cs-arm-r; transform-origin: 260px 244px; }
+    .cs-arm-l    { animation-name: cs-arm-l; transform-origin: 100px 244px; }
+    .cs-phone    { animation-name: cs-phone; opacity: 0; }
+    .cs-phone-click { animation-name: cs-phone-click; transform-origin: 276px 284px; }
+    .cs-flash    { animation-name: cs-flash; transform-origin: 294.1px 164.9px; opacity: 0; }
+    .cs-frame-flash { animation-name: cs-frame-flash; opacity: 0; }
+    .cs-check    { animation-name: cs-check; transform-origin: 338.1px 132.9px; opacity: 0; }
+    .cs-eyes     { animation-name: cs-eyes; transform-origin: 180px 186px; animation-timing-function: linear; }
+    .cs-lids     { animation-name: cs-lids; opacity: 0; animation-timing-function: linear; }
+    .cs-happy    { animation-name: cs-happy; opacity: 0; animation-timing-function: linear; }
+
+    .cs-cloud    { transform-box: view-box; animation: cs-cloud 14s ease-in-out infinite; }
+    .cs-cloud-b  { animation-duration: 18s; animation-direction: reverse; }
+    .cs-flag     { transform-box: view-box; transform-origin: 184px 54px; animation: cs-flag 3s ease-in-out infinite; }
+
+    @keyframes cs-cloud {
+      0%, 100% { transform: translateX(0); }
+      50%      { transform: translateX(8px); }
+    }
+    @keyframes cs-flag {
+      0%, 100% { transform: skewY(0deg) scaleX(1); }
+      50%      { transform: skewY(-3deg) scaleX(0.96); }
+    }
+    @keyframes cs-walk {
+      0% { transform: translateX(-70px); }
+      23.077% { transform: translateX(0px); }
+      61.538% { transform: translateX(0px); }
+      84.615% { transform: translateX(-70px); }
+      100% { transform: translateX(-70px); }
+    }
+    @keyframes cs-bob {
+      0% { transform: translateY(0px); }
+      1.923% { transform: translateY(-5px); }
+      3.846% { transform: translateY(0px); }
+      5.769% { transform: translateY(-5px); }
+      7.692% { transform: translateY(0px); }
+      9.615% { transform: translateY(-5px); }
+      11.538% { transform: translateY(0px); }
+      13.462% { transform: translateY(-5px); }
+      15.385% { transform: translateY(0px); }
+      17.308% { transform: translateY(-5px); }
+      19.231% { transform: translateY(0px); }
+      21.154% { transform: translateY(-5px); }
+      23.077% { transform: translateY(0px); }
+      26.154% { transform: translateY(0px); }
+      30% { transform: translateY(-2px); }
+      35.385% { transform: translateY(0px); }
+      40% { transform: translateY(0px); }
+      43.077% { transform: translateY(0px); }
+      44.462% { transform: translateY(-11px); }
+      46.154% { transform: translateY(0px); }
+      47.692% { transform: translateY(-1.5px); }
+      52.308% { transform: translateY(0px); }
+      56.923% { transform: translateY(-2px); }
+      61.538% { transform: translateY(0px); }
+      63.462% { transform: translateY(-5px); }
+      65.385% { transform: translateY(0px); }
+      67.308% { transform: translateY(-5px); }
+      69.231% { transform: translateY(0px); }
+      71.154% { transform: translateY(-5px); }
+      73.077% { transform: translateY(0px); }
+      75% { transform: translateY(-5px); }
+      76.923% { transform: translateY(0px); }
+      78.846% { transform: translateY(-5px); }
+      80.769% { transform: translateY(0px); }
+      82.692% { transform: translateY(-5px); }
+      84.615% { transform: translateY(0px); }
+      89.231% { transform: translateY(-2.5px); }
+      94.615% { transform: translateY(0px); }
+      97.692% { transform: translateY(-1px); }
+      100% { transform: translateY(0px); }
+    }
+    @keyframes cs-shadow {
+      0% { transform: scaleX(1.000); }
+      1.923% { transform: scaleX(0.929); }
+      3.846% { transform: scaleX(1.000); }
+      5.769% { transform: scaleX(0.929); }
+      7.692% { transform: scaleX(1.000); }
+      9.615% { transform: scaleX(0.929); }
+      11.538% { transform: scaleX(1.000); }
+      13.462% { transform: scaleX(0.929); }
+      15.385% { transform: scaleX(1.000); }
+      17.308% { transform: scaleX(0.929); }
+      19.231% { transform: scaleX(1.000); }
+      21.154% { transform: scaleX(0.929); }
+      23.077% { transform: scaleX(1.000); }
+      26.154% { transform: scaleX(1.000); }
+      30% { transform: scaleX(0.971); }
+      35.385% { transform: scaleX(1.000); }
+      40% { transform: scaleX(1.000); }
+      43.077% { transform: scaleX(1.000); }
+      44.462% { transform: scaleX(0.843); }
+      46.154% { transform: scaleX(1.000); }
+      47.692% { transform: scaleX(0.979); }
+      52.308% { transform: scaleX(1.000); }
+      56.923% { transform: scaleX(0.971); }
+      61.538% { transform: scaleX(1.000); }
+      63.462% { transform: scaleX(0.929); }
+      65.385% { transform: scaleX(1.000); }
+      67.308% { transform: scaleX(0.929); }
+      69.231% { transform: scaleX(1.000); }
+      71.154% { transform: scaleX(0.929); }
+      73.077% { transform: scaleX(1.000); }
+      75% { transform: scaleX(0.929); }
+      76.923% { transform: scaleX(1.000); }
+      78.846% { transform: scaleX(0.929); }
+      80.769% { transform: scaleX(1.000); }
+      82.692% { transform: scaleX(0.929); }
+      84.615% { transform: scaleX(1.000); }
+      89.231% { transform: scaleX(0.964); }
+      94.615% { transform: scaleX(1.000); }
+      97.692% { transform: scaleX(0.986); }
+      100% { transform: scaleX(1.000); }
+    }
+    @keyframes cs-foot-l {
+      0% { transform: translateY(0px); }
+      1.923% { transform: translateY(-9px); }
+      3.846% { transform: translateY(0px); }
+      7.692% { transform: translateY(0px); }
+      9.615% { transform: translateY(-9px); }
+      11.538% { transform: translateY(0px); }
+      15.385% { transform: translateY(0px); }
+      17.308% { transform: translateY(-9px); }
+      19.231% { transform: translateY(0px); }
+      43.077% { transform: translateY(0px); }
+      44.462% { transform: translateY(-9px); }
+      46.154% { transform: translateY(0px); }
+      61.538% { transform: translateY(0px); }
+      63.462% { transform: translateY(-9px); }
+      65.385% { transform: translateY(0px); }
+      69.231% { transform: translateY(0px); }
+      71.154% { transform: translateY(-9px); }
+      73.077% { transform: translateY(0px); }
+      76.923% { transform: translateY(0px); }
+      78.846% { transform: translateY(-9px); }
+      80.769% { transform: translateY(0px); }
+      100% { transform: translateY(0px); }
+    }
+    @keyframes cs-foot-r {
+      0% { transform: translateY(0px); }
+      3.846% { transform: translateY(0px); }
+      5.769% { transform: translateY(-9px); }
+      7.692% { transform: translateY(0px); }
+      11.538% { transform: translateY(0px); }
+      13.462% { transform: translateY(-9px); }
+      15.385% { transform: translateY(0px); }
+      19.231% { transform: translateY(0px); }
+      21.154% { transform: translateY(-9px); }
+      23.077% { transform: translateY(0px); }
+      43.077% { transform: translateY(0px); }
+      44.462% { transform: translateY(-9px); }
+      46.154% { transform: translateY(0px); }
+      65.385% { transform: translateY(0px); }
+      67.308% { transform: translateY(-9px); }
+      69.231% { transform: translateY(0px); }
+      73.077% { transform: translateY(0px); }
+      75% { transform: translateY(-9px); }
+      76.923% { transform: translateY(0px); }
+      80.769% { transform: translateY(0px); }
+      82.692% { transform: translateY(-9px); }
+      84.615% { transform: translateY(0px); }
+      100% { transform: translateY(0px); }
+    }
+    @keyframes cs-tilt {
+      0% { transform: rotate(2.5deg); }
+      1.923% { transform: rotate(4.3deg); }
+      3.846% { transform: rotate(2.5deg); }
+      5.769% { transform: rotate(0.7deg); }
+      7.692% { transform: rotate(2.5deg); }
+      9.615% { transform: rotate(4.3deg); }
+      11.538% { transform: rotate(2.5deg); }
+      13.462% { transform: rotate(0.7deg); }
+      15.385% { transform: rotate(2.5deg); }
+      17.308% { transform: rotate(4.3deg); }
+      19.231% { transform: rotate(2.5deg); }
+      21.154% { transform: rotate(0.7deg); }
+      23.077% { transform: rotate(2.5deg); }
+      26.154% { transform: rotate(0deg); }
+      59.231% { transform: rotate(0deg); }
+      61.538% { transform: rotate(-2.5deg); }
+      63.462% { transform: rotate(-0.7deg); }
+      65.385% { transform: rotate(-2.5deg); }
+      67.308% { transform: rotate(-4.3deg); }
+      69.231% { transform: rotate(-2.5deg); }
+      71.154% { transform: rotate(-0.7deg); }
+      73.077% { transform: rotate(-2.5deg); }
+      75% { transform: rotate(-4.3deg); }
+      76.923% { transform: rotate(-2.5deg); }
+      78.846% { transform: rotate(-0.7deg); }
+      80.769% { transform: rotate(-2.5deg); }
+      82.692% { transform: rotate(-4.3deg); }
+      84.615% { transform: rotate(-2.5deg); }
+      88.462% { transform: rotate(0deg); }
+      96.923% { transform: rotate(0deg); }
+      100% { transform: rotate(2.5deg); }
+    }
+    @keyframes cs-arm-r {
+      0% { transform: rotate(0deg); }
+      1.923% { transform: rotate(9deg); }
+      3.846% { transform: rotate(0deg); }
+      5.769% { transform: rotate(-9deg); }
+      7.692% { transform: rotate(0deg); }
+      9.615% { transform: rotate(9deg); }
+      11.538% { transform: rotate(0deg); }
+      13.462% { transform: rotate(-9deg); }
+      15.385% { transform: rotate(0deg); }
+      17.308% { transform: rotate(9deg); }
+      19.231% { transform: rotate(0deg); }
+      21.154% { transform: rotate(-9deg); }
+      23.077% { transform: rotate(0deg); }
+      26.923% { transform: rotate(0deg); }
+      32.154% { transform: rotate(-118deg); }
+      33.077% { transform: rotate(-112deg); }
+      36.154% { transform: rotate(-110deg); }
+      38.462% { transform: rotate(-112deg); }
+      39.077% { transform: rotate(-109deg); }
+      40.385% { transform: rotate(-112deg); }
+      49.231% { transform: rotate(-112deg); }
+      55.385% { transform: rotate(0deg); }
+      61.538% { transform: rotate(0deg); }
+      63.462% { transform: rotate(9deg); }
+      65.385% { transform: rotate(0deg); }
+      67.308% { transform: rotate(-9deg); }
+      69.231% { transform: rotate(0deg); }
+      71.154% { transform: rotate(9deg); }
+      73.077% { transform: rotate(0deg); }
+      75% { transform: rotate(-9deg); }
+      76.923% { transform: rotate(0deg); }
+      78.846% { transform: rotate(9deg); }
+      80.769% { transform: rotate(0deg); }
+      82.692% { transform: rotate(-9deg); }
+      84.615% { transform: rotate(0deg); }
+      100% { transform: rotate(0deg); }
+    }
+    @keyframes cs-arm-l {
+      0% { transform: rotate(0deg); }
+      1.923% { transform: rotate(9deg); }
+      3.846% { transform: rotate(0deg); }
+      5.769% { transform: rotate(-9deg); }
+      7.692% { transform: rotate(0deg); }
+      9.615% { transform: rotate(9deg); }
+      11.538% { transform: rotate(0deg); }
+      13.462% { transform: rotate(-9deg); }
+      15.385% { transform: rotate(0deg); }
+      17.308% { transform: rotate(9deg); }
+      19.231% { transform: rotate(0deg); }
+      21.154% { transform: rotate(-9deg); }
+      23.077% { transform: rotate(0deg); }
+      26.154% { transform: rotate(0deg); }
+      30.769% { transform: rotate(6deg); }
+      40.769% { transform: rotate(6deg); }
+      44.462% { transform: rotate(-14deg); }
+      49.231% { transform: rotate(4deg); }
+      55.385% { transform: rotate(0deg); }
+      61.538% { transform: rotate(0deg); }
+      63.462% { transform: rotate(9deg); }
+      65.385% { transform: rotate(0deg); }
+      67.308% { transform: rotate(-9deg); }
+      69.231% { transform: rotate(0deg); }
+      71.154% { transform: rotate(9deg); }
+      73.077% { transform: rotate(0deg); }
+      75% { transform: rotate(-9deg); }
+      76.923% { transform: rotate(0deg); }
+      78.846% { transform: rotate(9deg); }
+      80.769% { transform: rotate(0deg); }
+      82.692% { transform: rotate(-9deg); }
+      84.615% { transform: rotate(0deg); }
+      100% { transform: rotate(0deg); }
+    }
+    @keyframes cs-phone {
+      0% { opacity: 0; }
+      26.923% { opacity: 0; }
+      29.615% { opacity: 1; }
+      52.308% { opacity: 1; }
+      55.385% { opacity: 0; }
+      100% { opacity: 0; }
+    }
+    @keyframes cs-phone-click {
+      0% { transform: scale(1); }
+      38.308% { transform: scale(1); }
+      38.923% { transform: scale(0.92); }
+      40% { transform: scale(1); }
+      100% { transform: scale(1); }
+    }
+    @keyframes cs-flash {
+      0% { opacity: 0; transform: scale(0.2); }
+      38.385% { opacity: 0; transform: scale(0.2); }
+      39.077% { opacity: 1; transform: scale(1); }
+      41.923% { opacity: 0; transform: scale(1.5); }
+      100% { opacity: 0; transform: scale(0.2); }
+    }
+    @keyframes cs-frame-flash {
+      0% { opacity: 0; }
+      38.462% { opacity: 0; }
+      38.923% { opacity: 0.28; }
+      41.538% { opacity: 0; }
+      100% { opacity: 0; }
+    }
+    @keyframes cs-check {
+      0% { opacity: 0; transform: scale(0); }
+      41.923% { opacity: 0; transform: scale(0.3); }
+      43.846% { opacity: 1; transform: scale(1.12); }
+      45% { opacity: 1; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1); }
+      52.308% { opacity: 0; transform: scale(0.6); }
+      100% { opacity: 0; transform: scale(0); }
+    }
+    @keyframes cs-eyes {
+      0% { transform: scaleY(1); }
+      12.308% { transform: scaleY(1); }
+      12.923% { transform: scaleY(0); }
+      13.538% { transform: scaleY(0); }
+      14.154% { transform: scaleY(1); }
+      40.769% { transform: scaleY(1); }
+      41.692% { transform: scaleY(0); }
+      48.308% { transform: scaleY(0); }
+      49.231% { transform: scaleY(1); }
+      58.462% { transform: scaleY(1); }
+      59.077% { transform: scaleY(0); }
+      59.692% { transform: scaleY(0); }
+      60.308% { transform: scaleY(1); }
+      78.462% { transform: scaleY(1); }
+      79.077% { transform: scaleY(0); }
+      79.692% { transform: scaleY(0); }
+      80.308% { transform: scaleY(1); }
+      92.308% { transform: scaleY(1); }
+      92.923% { transform: scaleY(0); }
+      93.538% { transform: scaleY(0); }
+      94.154% { transform: scaleY(1); }
+      95% { transform: scaleY(1); }
+      95.615% { transform: scaleY(0); }
+      96.231% { transform: scaleY(0); }
+      96.846% { transform: scaleY(1); }
+      100% { transform: scaleY(1); }
+    }
+    @keyframes cs-lids {
+      0% { opacity: 0; }
+      12.615% { opacity: 0; }
+      12.923% { opacity: 1; }
+      13.538% { opacity: 1; }
+      13.846% { opacity: 0; }
+      58.769% { opacity: 0; }
+      59.077% { opacity: 1; }
+      59.692% { opacity: 1; }
+      60% { opacity: 0; }
+      78.769% { opacity: 0; }
+      79.077% { opacity: 1; }
+      79.692% { opacity: 1; }
+      80% { opacity: 0; }
+      92.615% { opacity: 0; }
+      92.923% { opacity: 1; }
+      93.538% { opacity: 1; }
+      93.846% { opacity: 0; }
+      95.308% { opacity: 0; }
+      95.615% { opacity: 1; }
+      96.231% { opacity: 1; }
+      96.538% { opacity: 0; }
+      100% { opacity: 0; }
+    }
+    @keyframes cs-happy {
+      0% { opacity: 0; }
+      41.077% { opacity: 0; }
+      41.692% { opacity: 1; }
+      48.308% { opacity: 1; }
+      48.923% { opacity: 0; }
+      100% { opacity: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; }
+    }
+  </style>
+
+  <defs>
+    <radialGradient id="cs-flash-glow">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.35" stop-color="#fff7cc" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#ffe680" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background scenery: soft and light so the mascot stays the focus -->
+  <g class="cs-scene">
+    <!-- Clouds -->
+    <g class="cs-cloud" fill="#dbe7fa">
+      <g transform="translate(-6 86)">
+        <ellipse cx="30" cy="16" rx="30" ry="14"/>
+        <circle cx="20" cy="10" r="13"/>
+        <circle cx="40" cy="5" r="16"/>
+      </g>
+    </g>
+    <g class="cs-cloud cs-cloud-b" fill="#dbe7fa">
+      <g transform="translate(300 40)">
+        <ellipse cx="32" cy="18" rx="34" ry="14"/>
+        <circle cx="22" cy="12" r="14"/>
+        <circle cx="44" cy="6" r="17"/>
+      </g>
+      <g transform="translate(330 150)" opacity="0.85">
+        <ellipse cx="20" cy="10" rx="22" ry="9"/>
+        <circle cx="14" cy="6" r="9"/>
+        <circle cx="27" cy="3" r="11"/>
+      </g>
+    </g>
+
+    <!-- Ground -->
+    <ellipse cx="180" cy="360" rx="215" ry="22" fill="#e6f2df"/>
+
+    <!-- Houses (right) -->
+    <g>
+      <rect x="306" y="268" width="56" height="80" fill="#a9c8f2"/>
+      <path d="M300 272 L334 240 L368 272 Z" fill="#7fa9ea"/>
+      <rect x="318" y="284" width="12" height="12" rx="2" fill="#ffffff"/>
+      <rect x="338" y="284" width="12" height="12" rx="2" fill="#ffffff"/>
+      <rect x="328" y="314" width="14" height="34" rx="2" fill="#7fa9ea"/>
+      <rect x="352" y="300" width="38" height="48" fill="#bcd5f5"/>
+      <path d="M347 304 L371 282 L395 304 Z" fill="#94b8ee"/>
+      <rect x="364" y="314" width="12" height="12" rx="2" fill="#ffffff"/>
+    </g>
+
+    <!-- Tree (left) -->
+    <g>
+      <rect x="-4" y="258" width="12" height="92" rx="5" fill="#8a6a4a"/>
+      <circle cx="2" cy="232" r="32" fill="#5cb85c"/>
+      <circle cx="-16" cy="254" r="22" fill="#4aa64e"/>
+      <circle cx="22" cy="250" r="22" fill="#4aa64e"/>
+      <circle cx="-6" cy="220" r="14" fill="#7ccc75" opacity="0.7"/>
+    </g>
+
+    <!-- Bushes -->
+    <g fill="#5cb85c">
+      <circle cx="30" cy="346" r="16"/>
+      <circle cx="52" cy="342" r="20"/>
+      <circle cx="74" cy="350" r="13"/>
+      <circle cx="300" cy="350" r="14"/>
+      <circle cx="322" cy="342" r="20"/>
+      <circle cx="346" cy="348" r="16"/>
+      <circle cx="372" cy="352" r="12"/>
+    </g>
+    <g fill="#7ccc75" opacity="0.6">
+      <circle cx="48" cy="334" r="7"/>
+      <circle cx="318" cy="334" r="7"/>
+    </g>
+  </g>
+
+  <g class="cs-anim cs-walk">
+    <!-- Ground shadow -->
+    <ellipse class="cs-anim cs-shadow" cx="180" cy="362" rx="74" ry="9" fill="#1e3a8a" opacity="0.22"/>
+
+    <!-- Feet -->
+    <g stroke="#1a4bb8" stroke-width="4" fill="url(#cs-limb)">
+      <ellipse class="cs-anim cs-foot-l" cx="146" cy="342" rx="27" ry="14"/>
+      <ellipse class="cs-anim cs-foot-r" cx="214" cy="342" rx="27" ry="14"/>
+    </g>
+
+    <g class="cs-anim cs-tilt">
+      <g class="cs-anim cs-bob">
+        <!-- Left arm -->
+        <g class="cs-anim cs-arm-l">
+          <path d="M100 244 Q80 266 84 296" fill="none" stroke="#1a4bb8" stroke-width="30" stroke-linecap="round"/>
+          <path d="M100 244 Q80 266 84 296" fill="none" stroke="url(#cs-limb)" stroke-width="22" stroke-linecap="round"/>
+        </g>
+
+        <!-- Right arm, holding the phone during the photo -->
+        <g class="cs-anim cs-arm-r">
+          <path d="M260 244 Q280 266 276 296" fill="none" stroke="#1a4bb8" stroke-width="30" stroke-linecap="round"/>
+          <path d="M260 244 Q280 266 276 296" fill="none" stroke="url(#cs-limb)" stroke-width="22" stroke-linecap="round"/>
+          <g class="cs-anim cs-phone" transform="rotate(112 276 298)">
+            <g class="cs-anim cs-phone-click">
+              <!-- Back of a phone: lens, flash and the CitiSense pin -->
+              <rect x="255" y="240" width="42" height="66" rx="8" fill="#1e293b" stroke="#0f172a" stroke-width="3"/>
+              <circle cx="266" cy="254" r="7.5" fill="#0b1220" stroke="#64748b" stroke-width="2.5"/>
+              <circle cx="264" cy="252" r="1.8" fill="#cbd5e1"/>
+              <circle cx="284" cy="253" r="3.5" fill="#fde68a"/>
+              <path d="M276 288 C271 282 269 279 269 276 A7 7 0 1 1 283 276 C283 279 281 282 276 288 Z" fill="#3b82f6"/>
+              <circle cx="276" cy="276" r="2.5" fill="#1e293b"/>
+            </g>
+          </g>
+          <!-- Hand (drawn over the phone so it holds it) -->
+          <circle cx="276" cy="300" r="13" fill="#3f7ce8" stroke="#1a4bb8" stroke-width="4"/>
+        </g>
+
+      <!-- Antenna and flag -->
+      <line x1="180" y1="100" x2="180" y2="46" stroke="#1a4bb8" stroke-width="12" stroke-linecap="round"/>
+      <line x1="180" y1="100" x2="180" y2="46" stroke="#2f6be0" stroke-width="7" stroke-linecap="round"/>
+      <g class="cs-flag">
+        <path d="M184 47 L236 52 Q224 64 238 78 L184 76 Z" fill="#2563eb" stroke="#1a4bb8" stroke-width="3" stroke-linejoin="round"/>
+      </g>
+      <circle cx="180" cy="40" r="10" fill="#2f6be0" stroke="#1a4bb8" stroke-width="3"/>
+      <circle cx="177" cy="37" r="3" fill="#ffffff" opacity="0.5"/>
+
+      <!-- Ear knobs -->
+      <g fill="#2f6be0" stroke="#1a4bb8" stroke-width="3">
+        <circle cx="82" cy="204" r="13"/>
+        <circle cx="278" cy="204" r="13"/>
+      </g>
+
+      <!-- Body -->
+      <path d="M180 96 C246 96 276 152 280 216 C285 288 250 334 180 334 C110 334 75 288 80 216 C84 152 114 96 180 96 Z"
+            fill="url(#cs-body)" stroke="#1a4bb8" stroke-width="4"/>
+      <ellipse cx="140" cy="132" rx="30" ry="16" fill="#ffffff" opacity="0.22" transform="rotate(-28 140 132)"/>
+
+        <!-- Face -->
+        <g class="cs-face">
+          <g class="cs-anim cs-eyes">
+            <ellipse cx="147" cy="186" rx="37" ry="40" fill="#ffffff"/>
+            <ellipse cx="213" cy="186" rx="37" ry="40" fill="#ffffff"/>
+            <circle cx="152" cy="190" r="20" fill="#141a2a"/>
+            <circle cx="208" cy="190" r="20" fill="#141a2a"/>
+            <circle cx="159" cy="181" r="7" fill="#ffffff"/>
+            <circle cx="215" cy="181" r="7" fill="#ffffff"/>
+            <circle cx="146" cy="198" r="3" fill="#ffffff"/>
+            <circle cx="202" cy="198" r="3" fill="#ffffff"/>
+          </g>
+          <!-- Blink -->
+          <g class="cs-anim cs-lids" fill="none" stroke="#141a2a" stroke-width="5" stroke-linecap="round">
+            <path d="M122 190 Q147 206 172 190"/>
+            <path d="M188 190 Q213 206 238 190"/>
+          </g>
+          <!-- Happy closed eyes after the photo -->
+          <g class="cs-anim cs-happy" fill="none" stroke="#141a2a" stroke-width="5.5" stroke-linecap="round">
+            <path d="M124 196 Q147 172 170 196"/>
+            <path d="M190 196 Q213 172 236 196"/>
+          </g>
+
+        <!-- Rosy cheeks -->
+        <ellipse cx="118" cy="238" rx="12" ry="7" fill="#f472b6" opacity="0.28"/>
+        <ellipse cx="242" cy="238" rx="12" ry="7" fill="#f472b6" opacity="0.28"/>
+
+        <!-- Happy open smile -->
+        <path d="M164 236 Q180 240 196 236 Q194 257 180 257 Q166 257 164 236 Z" fill="#3b0f1f"/>
+        <g clip-path="url(#cs-mouth-clip)">
+          <ellipse cx="180" cy="256" rx="11" ry="7" fill="#f07c89"/>
+        </g>
+      </g>
+
+        <!-- Shield badge with location pin -->
+      <path d="M180 264 C194 272 208 274 218 272 L218 292 C218 307 201 318 180 324 C159 318 142 307 142 292 L142 272 C152 274 166 272 180 264 Z"
+            fill="url(#cs-shield)" stroke="#f5b82e" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M180 309 C172 299 168 294 168 288 A12 12 0 1 1 192 288 C192 294 188 299 180 309 Z" fill="#ffffff"/>
+      <circle cx="180" cy="288" r="4.5" fill="#2a63dc"/>
+
+        <!-- Camera flash at the lens -->
+        <circle class="cs-anim cs-flash" cx="294.1" cy="164.9" r="46" fill="url(#cs-flash-glow)"/>
+
+        <!-- "Photo captured" check -->
+        <g class="cs-anim cs-check">
+          <circle cx="338.1" cy="132.9" r="13" fill="#22c55e" stroke="#ffffff" stroke-width="3"/>
+          <path d="M332.1 132.9 l4.5 4.5 l8 -9" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+      </g>
+    </g>
+  </g>
+
+  <!-- Very soft full-frame flash -->
+  <rect class="cs-anim cs-frame-flash" x="-44" y="0" width="448" height="380" fill="#ffffff"/>
+</svg>
