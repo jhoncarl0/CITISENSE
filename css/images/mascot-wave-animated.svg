@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 380" role="img" aria-label="CitiSense mascot waving hello">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-44 0 448 380" role="img" aria-label="CitiSense mascot waving hello">
   <!--
     CitiSense mascot: animated greeting loop.
     Every motion is a separate, self-contained CSS loop that starts and ends at
@@ -8,6 +8,7 @@
       wave    6s  a short friendly wave, then a calm rest
       blink   9s  a single blink, then a natural double blink
       flag    3s  a very soft flutter
+      clouds 14s  a slow, barely-there drift in the background
     Everything stops for users who prefer reduced motion.
   -->
   <defs>
@@ -45,6 +46,8 @@
     .cs-eyes   { animation-name: cs-blink;  animation-duration: 9s; transform-origin: 180px 186px;
                  animation-timing-function: linear; }
     .cs-lids   { animation-name: cs-lids;   animation-duration: 9s; animation-timing-function: linear; opacity: 0; }
+    .cs-cloud  { transform-box: view-box; animation: cs-cloud 14s ease-in-out infinite; }
+    .cs-cloud-b { animation-duration: 18s; animation-direction: reverse; }
     .cs-flag   { animation-name: cs-flag;   animation-duration: 3s; transform-origin: 184px 54px; }
 
     @keyframes cs-float {
@@ -100,6 +103,11 @@
       31%, 32%, 81%, 81.6%, 86%, 86.6%               { opacity: 1; }
     }
 
+    @keyframes cs-cloud {
+      0%, 100% { transform: translateX(0); }
+      50%      { transform: translateX(8px); }
+    }
+
     @keyframes cs-flag {
       0%, 100% { transform: skewY(0deg) scaleX(1); }
       50%      { transform: skewY(-3deg) scaleX(0.96); }
@@ -109,6 +117,69 @@
       * { animation: none !important; }
     }
   </style>
+
+  <!-- Background scenery: soft and light so the mascot stays the focus -->
+  <g class="cs-scene">
+    <!-- Clouds -->
+    <g class="cs-cloud" fill="#dbe7fa">
+      <g transform="translate(-6 86)">
+        <ellipse cx="30" cy="16" rx="30" ry="14"/>
+        <circle cx="20" cy="10" r="13"/>
+        <circle cx="40" cy="5" r="16"/>
+      </g>
+    </g>
+    <g class="cs-cloud cs-cloud-b" fill="#dbe7fa">
+      <g transform="translate(300 40)">
+        <ellipse cx="32" cy="18" rx="34" ry="14"/>
+        <circle cx="22" cy="12" r="14"/>
+        <circle cx="44" cy="6" r="17"/>
+      </g>
+      <g transform="translate(330 150)" opacity="0.85">
+        <ellipse cx="20" cy="10" rx="22" ry="9"/>
+        <circle cx="14" cy="6" r="9"/>
+        <circle cx="27" cy="3" r="11"/>
+      </g>
+    </g>
+
+    <!-- Ground -->
+    <ellipse cx="180" cy="360" rx="215" ry="22" fill="#e6f2df"/>
+
+    <!-- Houses (right) -->
+    <g>
+      <rect x="306" y="268" width="56" height="80" fill="#a9c8f2"/>
+      <path d="M300 272 L334 240 L368 272 Z" fill="#7fa9ea"/>
+      <rect x="318" y="284" width="12" height="12" rx="2" fill="#ffffff"/>
+      <rect x="338" y="284" width="12" height="12" rx="2" fill="#ffffff"/>
+      <rect x="328" y="314" width="14" height="34" rx="2" fill="#7fa9ea"/>
+      <rect x="352" y="300" width="38" height="48" fill="#bcd5f5"/>
+      <path d="M347 304 L371 282 L395 304 Z" fill="#94b8ee"/>
+      <rect x="364" y="314" width="12" height="12" rx="2" fill="#ffffff"/>
+    </g>
+
+    <!-- Tree (left) -->
+    <g>
+      <rect x="-4" y="258" width="12" height="92" rx="5" fill="#8a6a4a"/>
+      <circle cx="2" cy="232" r="32" fill="#5cb85c"/>
+      <circle cx="-16" cy="254" r="22" fill="#4aa64e"/>
+      <circle cx="22" cy="250" r="22" fill="#4aa64e"/>
+      <circle cx="-6" cy="220" r="14" fill="#7ccc75" opacity="0.7"/>
+    </g>
+
+    <!-- Bushes -->
+    <g fill="#5cb85c">
+      <circle cx="30" cy="346" r="16"/>
+      <circle cx="52" cy="342" r="20"/>
+      <circle cx="74" cy="350" r="13"/>
+      <circle cx="300" cy="350" r="14"/>
+      <circle cx="322" cy="342" r="20"/>
+      <circle cx="346" cy="348" r="16"/>
+      <circle cx="372" cy="352" r="12"/>
+    </g>
+    <g fill="#7ccc75" opacity="0.6">
+      <circle cx="48" cy="334" r="7"/>
+      <circle cx="318" cy="334" r="7"/>
+    </g>
+  </g>
 
   <!-- Ground shadow (stays on the ground while the mascot floats) -->
   <ellipse class="cs-shadow" cx="180" cy="362" rx="74" ry="9" fill="#1e3a8a" opacity="0.22"/>
