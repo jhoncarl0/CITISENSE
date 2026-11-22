@@ -1661,3 +1661,41 @@ button.cs-stat:hover {
     background: var(--cs-pending-bg);
     color: var(--cs-pending-text);
 }
+
+/* Report details as a vertical list (Reports, Possible Duplicates):
+   one "label  value" pair per line, easy to scan. */
+.cs-facts {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 8px 0 0;
+    font-size: 15px;
+}
+
+.cs-facts > div {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: 10px;
+}
+
+.cs-facts dt {
+    color: var(--cs-subtle);
+    font-weight: 600;
+}
+
+.cs-facts dd {
+    margin: 0;
+    color: var(--cs-text);
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+    .cs-facts > div {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .cs-facts > div + div {
+        margin-top: 4px;
+    }
+}

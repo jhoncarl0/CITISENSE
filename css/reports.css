@@ -280,6 +280,134 @@
     line-height: 1.6;
 }
 
+/* Report card in View: same layout as the report form in the CitiSense app
+   (numbered sections; map preview under Location). */
+.rp-form-card {
+    overflow: hidden;
+    background: var(--cs-surface);
+    border: 1px solid var(--cs-border);
+    border-radius: 20px;
+    box-shadow: var(--cs-shadow-sm);
+}
+
+.rp-form-intro {
+    padding: 20px 20px 16px;
+    background: var(--cs-bg);
+    border-bottom: 1px solid var(--cs-border);
+}
+
+.rp-form-intro h3 {
+    margin: 10px 0 4px;
+    color: var(--cs-primary);
+    font-size: 22px;
+    line-height: 1.2;
+}
+
+.rp-form-intro p {
+    font-size: 14px;
+}
+
+.rp-form-body {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    padding: 20px;
+}
+
+.rp-form-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.rp-form-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    color: var(--cs-navy);
+    font-size: 17px;
+}
+
+.rp-form-number {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--cs-primary);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+/* Read-only "field", styled like the app's input boxes */
+.rp-field {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 52px;
+    margin: 0;
+    padding: 12px 15px;
+    border: 1px solid var(--cs-border);
+    border-radius: 12px;
+    background: var(--cs-surface-alt);
+    color: var(--cs-navy);
+}
+
+.rp-field > i {
+    color: var(--cs-primary);
+    font-size: 20px;
+}
+
+.rp-field.rp-description {
+    display: block;
+}
+
+.rp-form-section .rp-photo,
+.rp-form-section .rp-no-photo {
+    border-radius: 16px;
+}
+
+.rp-map {
+    height: 190px;
+    overflow: hidden;
+    border: 1px solid var(--cs-border);
+    border-radius: 12px;
+    background: var(--cs-surface-alt);
+}
+
+.rp-map-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: auto;
+    min-height: 70px;
+    padding: 14px;
+    color: var(--cs-subtle);
+    font-size: 14px;
+    text-align: center;
+}
+
+.rp-map-pin {
+    color: var(--cs-primary);
+    font-size: 40px;
+    line-height: 1;
+    text-shadow: 0 2px 4px rgba(15, 30, 70, 0.3);
+}
+
+.rp-map-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-start;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
 .rp-rows {
     display: flex;
     flex-direction: column;

@@ -101,6 +101,13 @@
         }
     }
 
+    /** Today at 00:00 in the format of a datetime-local input. */
+    function todayStart() {
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, "0");
+        return now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate()) + "T00:00";
+    }
+
     function done(message) {
         CS.flashAfterReload(message, "success");
         window.location.reload();
@@ -130,6 +137,51 @@
             closeDrawer();
         }
     });
+
+    /* Icons per type of issue (same idea as csCategoryIcon() in PHP). */
+    function categoryIcon(category) {
+        const name = String(category || "").toLowerCase();
+        if (name.includes("waste") || name.includes("garbage") || name.includes("trash")) return "bi-trash3";
+        if (name.includes("light")) return "bi-lightbulb";
+        if (name.includes("drain") || name.includes("flood") || name.includes("water")) return "bi-droplet";
+        if (name.includes("road") || name.includes("pothole")) return "bi-cone-striped";
+        if (name.includes("tree") || name.includes("vegetation")) return "bi-tree";
+        return "bi-exclamation-diamond";
+    }
+
+    /* Small map with a pin, like the location preview in the app. */
+    let detailMap = null;
+    function showMap(report, hasPoint) {
+        if (detailMap) {
+            detailMap.remove();
+            detailMap = null;
+        }
+        const box = document.getElementById("rpMap");
+        if (!hasPoint || !box) return;
+        if (!window.L) {
+            box.classList.add("rp-map-empty");
+            box.textContent = "The map could not be loaded. Use “Open in Google Maps” below.";
+            return;
+        }
+
+        const point = [report.lat, report.lng];
+        detailMap = window.L.map(box, { scrollWheelZoom: false, attributionControl: true }).setView(point, 17);
+        window.L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+            attribution: "&copy; OpenStreetMap contributors"
+        }).addTo(detailMap);
+        window.L.marker(point, {
+            icon: window.L.divIcon({
+                className: "rp-map-pin",
+                html: '<i class="bi bi-geo-alt-fill" aria-hidden="true"></i>',
+                iconSize: [40, 40],
+                iconAnchor: [20, 38]
+            })
+        }).addTo(detailMap);
+
+        // The drawer slides in, so measure the map again once it is visible.
+        setTimeout(() => detailMap && detailMap.invalidateSize(), 320);
+    }
 
     function row(label, value) {
         return el("div", { class: "rp-row" },
@@ -203,11 +255,13 @@
         /* Target date (accepted first reports only) */
         let timelineBlock = null;
         if (report.isOriginal && (report.statusID === IN_PROGRESS || report.statusID === OVERDUE)) {
-            const input = el("input", { type: "datetime-local", id: "rpTimeline", class: "cs-input", value: report.timelineInput });
+            // Not earlier than the day the report was accepted.
+            const input = el("input", { type: "datetime-local", id: "rpTimeline", class: "cs-input", value: report.timelineInput, min: report.timelineMin });
             const save = el("button", { type: "submit", class: "cs-btn cs-btn-secondary" }, "Save Date");
             const form = el("form", { class: "rp-timeline" },
                 el("label", { class: "cs-label", for: "rpTimeline", text: "Expected completion date" }),
                 el("div", { class: "rp-timeline-row" }, input, save),
+                el("span", { class: "cs-hint", text: "Choose " + report.acceptedOn + " (when the report was accepted) or a later date." }),
                 report.statusID === OVERDUE
                     ? el("span", { class: "cs-hint", text: "This report is past its date. Saving a new date moves it back to In Progress." })
                     : null
@@ -216,6 +270,11 @@
                 event.preventDefault();
                 if (!input.value) {
                     CS.toast("Please choose a date and time.", "error");
+                    return;
+                }
+                if (report.timelineMin && input.value < report.timelineMin) {
+                    CS.toast("The expected completion date cannot be earlier than " + report.acceptedOn + ", when the report was accepted.", "error");
+                    input.focus();
                     return;
                 }
                 busy(save, true);
@@ -248,20 +307,53 @@
                 ))
             : null;
 
-        drawerBody.replaceChildren(el("div", { class: "rp-details" },
-            el("div", { class: "rp-details-head" },
+        /* Same layout as the report form in the CitiSense app: numbered sections
+           1 Photo · 2 Issue Category · 3 Location (with map) · 4 Description. */
+        const section = (number, title, ...content) => el("section", { class: "rp-form-section" },
+            el("h4", { class: "rp-form-heading" }, el("span", { class: "rp-form-number", text: number }), title),
+            ...content
+        );
+
+        const hasPoint = Number.isFinite(report.lat) && Number.isFinite(report.lng);
+        const mapBox = hasPoint
+            ? el("div", { class: "rp-map", id: "rpMap", role: "img", "aria-label": "Map of the report location" })
+            : el("div", { class: "rp-map rp-map-empty" }, icon("bi-geo-alt"), "No map location was saved for this report.");
+        const mapsLink = hasPoint
+            ? el("a", {
+                class: "rp-map-link",
+                href: "https://www.google.com/maps/search/?api=1&query=" + report.lat + "," + report.lng,
+                target: "_blank",
+                rel: "noopener"
+            }, icon("bi-box-arrow-up-right"), "Open in Google Maps")
+            : null;
+
+        const formCard = el("div", { class: "rp-form-card" },
+            el("div", { class: "rp-form-intro" },
                 badge(report.status),
                 el("h3", { text: report.title || report.category }),
-                el("p", { class: "rp-line" }, icon("bi-geo-alt"), report.address || "Location not provided")
+                el("p", { class: "cs-subtle", text: "Report " + report.id + " · submitted " + report.date })
             ),
+            el("div", { class: "rp-form-body" },
+                section("1", "Photo", photo, extraPhotos),
+                section("2", "Issue Category",
+                    el("div", { class: "rp-field" }, icon(categoryIcon(report.category)), el("strong", { text: report.category }))
+                ),
+                section("3", "Location",
+                    mapBox,
+                    el("div", { class: "rp-field" }, icon(hasPoint ? "bi-geo-alt-fill" : "bi-geo-alt"),
+                        el("span", { text: report.address || "Location not provided" })),
+                    mapsLink
+                ),
+                section("4", "Description",
+                    el("p", { class: "rp-field rp-description", text: report.description || "No description was given." })
+                )
+            )
+        );
+
+        drawerBody.replaceChildren(el("div", { class: "rp-details" },
             notice,
             duplicateNote,
-            photo,
-            extraPhotos,
-            el("section", { class: "rp-section" },
-                el("h4", { text: "What the resident said" }),
-                el("p", { class: "rp-description", text: report.description || "No description was given." })
-            ),
+            formCard,
             timelineBlock,
             el("section", { class: "rp-section rp-message-box" },
                 el("div", {},
@@ -273,8 +365,6 @@
             ),
             el("section", { class: "rp-section" },
                 el("dl", { class: "rp-rows" },
-                    row("Type of issue", report.category),
-                    row("Submitted", report.date),
                     report.timeline ? row("Expected completion", report.timeline) : null,
                     row("Resident", report.resident),
                     row("Email", report.email ? el("a", { href: "mailto:" + report.email, text: report.email }) : null),
@@ -283,6 +373,8 @@
             ),
             el("section", { class: "rp-section" }, el("h4", { text: "History" }), history)
         ));
+
+        showMap(report, hasPoint);
 
         const buttons = actionButtons(report, true);
         drawerActions.replaceChildren(...buttons);
@@ -305,6 +397,8 @@
         document.getElementById("acceptText").textContent =
             "It will move to In Progress and the resident will be notified." + othersText(reports[target] || report);
         acceptForm.reset();
+        // Accepting happens today, so the expected completion date starts today.
+        document.getElementById("acceptTimeline").min = todayStart();
         CS.openModal("acceptModal");
     }
 
@@ -330,6 +424,12 @@
         const target = report.isOriginal ? report.id : report.originalID;
         const button = document.getElementById("acceptSubmit");
         const timeline = document.getElementById("acceptTimeline").value;
+
+        if (timeline && timeline < todayStart()) {
+            CS.toast("The expected completion date cannot be earlier than today, when the report is accepted.", "error");
+            document.getElementById("acceptTimeline").focus();
+            return;
+        }
 
         busy(button, true);
         try {
@@ -414,6 +514,10 @@
     function updateStatusForm() {
         const chosen = statusForm.querySelector("input[name=newStatus]:checked");
         const rejecting = chosen && chosen.value === "rejected";
+        // Back to New only restores the original status (Pending): no message.
+        const backToNew = chosen && chosen.value === PENDING;
+        statusMessage.closest(".cs-field").hidden = backToNew;
+        if (backToNew) statusMessage.value = "";
         statusReasons.hidden = !rejecting;
         statusLabel.innerHTML = rejecting
             ? "Reason sent to the resident <span class=\"cs-subtle\">(required)</span>"
@@ -436,7 +540,7 @@
         event.preventDefault();
         const chosen = statusForm.querySelector("input[name=newStatus]:checked");
         const button = document.getElementById("statusSubmit");
-        const remarks = statusMessage.value.trim();
+        const remarks = chosen && chosen.value === PENDING ? "" : statusMessage.value.trim();
 
         if (!chosen) {
             CS.toast("Please choose the new status.", "error");

@@ -400,6 +400,46 @@ try {
 
     /*
     |--------------------------------------------------------------------------
+    | NOT EARLIER THAN THE DAY THE REPORT WAS ACCEPTED
+    |--------------------------------------------------------------------------
+    | The latest move to In Progress (acceptance, or a new timeline after
+    | Overdue) is the earliest allowed day. The same day is allowed.
+    |--------------------------------------------------------------------------
+    */
+    $originalReportID = (string) $original["reportID"];
+
+    $stmt = $conn->prepare(
+        "SELECT MAX(dateChanged) AS acceptedAt
+         FROM reporthistory
+         WHERE reportID = ?
+           AND statusID = 'STAT002'"
+    );
+
+    $stmt->bind_param("s", $originalReportID);
+    $stmt->execute();
+
+    $acceptedAt = (string) ($stmt->get_result()->fetch_assoc()["acceptedAt"] ?? "");
+    $stmt->close();
+
+    if ($acceptedAt === "") {
+        $acceptedAt = (string) $original["dateReported"];
+    }
+
+    $earliestDay = (new DateTimeImmutable($acceptedAt))->setTime(0, 0);
+
+    if ($date < $earliestDay) {
+        timelineFail(
+            $conn,
+            $transactionStarted,
+            400,
+            "The expected completion date cannot be earlier than "
+                . $earliestDay->format("F j, Y")
+                . ", when the report was accepted. Please choose that day or a later date."
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | AN OVERDUE REPORT MUST RECEIVE A FUTURE DEADLINE
     |--------------------------------------------------------------------------
     */

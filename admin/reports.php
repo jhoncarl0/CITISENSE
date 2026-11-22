@@ -232,7 +232,7 @@ $reportSelectSQL = "
     SELECT
         r.reportID, r.userID, r.categoryID, r.locationID, r.statusID,
         r.title, r.description, r.dateReported, r.timeline,
-        c.categoryName, s.statusName, l.address,
+        c.categoryName, s.statusName, l.address, l.latitude, l.longitude,
         u.firstName, u.lastName, u.email, u.contactNo
     FROM reports r
     INNER JOIN categories c ON c.categoryID = r.categoryID
@@ -339,6 +339,7 @@ if ($detailReports) {
     $result = $stmt->get_result();
     while ($row = $result->fetch_assoc()) {
         $historyByReport[(string) $row["reportID"]][] = [
+            "raw" => (string) $row["dateChanged"],
             "status" => (string) $row["statusName"],
             "date" => csDate($row["dateChanged"], "M j, Y · g:i A"),
             "by" => trim(($row["firstName"] ?? "") . " " . ($row["lastName"] ?? "")),
@@ -364,15 +365,27 @@ foreach ($detailReports as $id => $report) {
         && in_array((string) $report["statusID"], ["STAT002", "STAT004"], true)
         && strtotime((string) $report["timeline"]) !== strtotime((string) $report["dateReported"]);
 
+    /* Earliest allowed expected completion day: when it was last accepted (In Progress). */
+    $acceptedAt = (string) $report["dateReported"];
+    foreach ($historyByReport[$id] ?? [] as $entry) {
+        if (strtolower(trim($entry["status"])) === "in progress") {
+            $acceptedAt = $entry["raw"];
+        }
+    }
+
     $payload[$id] = [
         "id" => $id,
         "category" => (string) $report["categoryName"],
         "title" => trim((string) ($report["title"] ?? "")),
         "description" => trim((string) ($report["description"] ?? "")),
         "address" => (string) ($report["address"] ?? ""),
+        "lat" => is_numeric($report["latitude"] ?? null) ? (float) $report["latitude"] : null,
+        "lng" => is_numeric($report["longitude"] ?? null) ? (float) $report["longitude"] : null,
         "date" => csDate($report["dateReported"], "F j, Y · g:i A"),
         "timeline" => $hasTargetDate ? csDate($report["timeline"], "F j, Y · g:i A") : "",
         "timelineInput" => $hasTargetDate ? csDate($report["timeline"], "Y-m-d\TH:i") : "",
+        "timelineMin" => csDate($acceptedAt, "Y-m-d\T00:00"),
+        "acceptedOn" => csDate($acceptedAt, "F j, Y"),
         "statusID" => (string) $report["statusID"],
         "status" => (string) $report["statusName"],
         "resident" => trim(($report["firstName"] ?? "") . " " . ($report["lastName"] ?? "")),
@@ -416,6 +429,7 @@ $emptyMessages = [
 
 $pageTitle = "Reports";
 $pageStyles = ["reports.css"];
+$pageHead = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">';
 include __DIR__ . "/partial/head.php";
 ?>
 <body>
@@ -553,12 +567,25 @@ include __DIR__ . "/partial/head.php";
                                 <h2><?= csEscape($info["title"] !== "" ? $info["title"] : $report["categoryName"]) ?></h2>
                                 <?= csStatusBadge($report["statusName"]) ?>
                             </div>
-                            <p class="rp-line"><i class="bi bi-geo-alt" aria-hidden="true"></i><?= csEscape($info["address"] !== "" ? $info["address"] : "Location not provided") ?></p>
-                            <p class="rp-line rp-meta">
-                                <?= csEscape(csDate($report["dateReported"], "M j, Y · g:i A")) ?>
-                                <?php if ($info["resident"] !== ""): ?> · by <?= csEscape($info["resident"]) ?><?php endif; ?>
-                                · ID <?= csEscape($id) ?>
-                            </p>
+                            <!-- One detail per line, easier to read. The location shows only in View. -->
+                            <dl class="cs-facts">
+                                <div>
+                                    <dt>Report ID</dt>
+                                    <dd><?= csEscape($id) ?></dd>
+                                </div>
+                                <div>
+                                    <dt>Type of issue</dt>
+                                    <dd><?= csEscape($report["categoryName"]) ?></dd>
+                                </div>
+                                <div>
+                                    <dt>Submitted</dt>
+                                    <dd><?= csEscape(csDate($report["dateReported"], "M j, Y · g:i A")) ?></dd>
+                                </div>
+                                <div>
+                                    <dt>Reported by</dt>
+                                    <dd><?= csEscape($info["resident"] !== "" ? $info["resident"] : "Resident") ?></dd>
+                                </div>
+                            </dl>
                             <?php if (!$info["isOriginal"]): ?>
                                 <p class="rp-line rp-repeat"><i class="bi bi-link-45deg" aria-hidden="true"></i>Same problem as report <?= csEscape($info["originalID"]) ?></p>
                             <?php elseif ($info["cycleSize"] > 1): ?>
@@ -843,6 +870,7 @@ include __DIR__ . "/partial/head.php";
 <script type="application/json" id="reportPayload"><?= $payloadJSON ?: "{}" ?></script>
 
 <?php include __DIR__ . "/partial/scripts.php"; ?>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="../js/reports.js?v=<?= $csAssetVersion ?>.1"></script>
 
 </body>
