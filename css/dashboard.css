@@ -35,7 +35,7 @@
 }
 
 .dash-mascot {
-    width: 200px;
+    width: 240px;
     flex-shrink: 0;
 }
 
@@ -283,7 +283,7 @@
 
 @media (max-width: 640px) {
     .dash-mascot {
-        width: 120px;
+        width: 150px;
     }
 
     .dash-welcome h1 {

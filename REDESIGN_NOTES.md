@@ -126,19 +126,65 @@ is only read once.
 
 ## 5. Messages (two-way communication, admin side)
 
-New page: **Community > Messages**.
+New page: **Community > Messages**: **one conversation per resident** (changed 22 Nov 2026).
 
-* **Report conversations** use the existing `report_messages` table. The admin
-  can read what residents wrote about a report and reply. A reply sends the resident a
-  notification. A conversation can also be started from a report's details panel
-  ("Open Messages").
-* **Announcement comments** use the new `announcement_comments` table. The admin can
-  read comments, reply, and hide or unhide inappropriate comments.
-  Hidden comments are kept, not deleted.
-* The sidebar shows how many conversations have new resident messages. A
-  conversation counts as read once an admin opens it or replies.
-  This is shared by all admins of the same barangay.
-* Each announcement card shows how many comments it has, with a link to them.
+* The list shows one entry per resident (photo, name, last message, which report it
+  was about, and a red count of new messages), newest first. Search finds residents by
+  name, email or report ID; searching a name also lists residents you have not talked to
+  yet ("Start a new conversation"). The **Residents** page has a **Message** button too.
+* A conversation combines every message about all of that resident's reports, oldest
+  first. Each message about a report shows a small tag (e.g. "Report REP002 ·
+  Streetlight") that opens the report.
+* **Profile** (button in the conversation header) slides in the resident's email,
+  contact number, member-since date and all their reports with status.
+* When writing, **About** chooses where the message goes:
+  * a report: saved in `report_messages` (the chat under that report in the app),
+    as before, and the resident gets a notification;
+  * **General message**: saved in the new table `resident_messages` (`barangayID`,
+    `userID`, `senderType`, `senderID`, `message`), with a notification
+    (`reportID` empty). If your `notification` table requires a report, the
+    message is still saved and only the notification is skipped.
+* "Open Messages" on a report opens that resident's conversation with the report
+  already chosen under **About**.
+* **Reply to a specific message** (like Messenger): point at a message and click
+  **Reply**. A "Replying to …" bar appears above the message box (✕ or Esc cancels),
+  and **About** switches to the same report as the original. The sent message shows
+  a quote of the original; clicking the quote jumps to it.
+* **Delete a message**: point at it and click **Delete**. It is removed for everyone
+  (also in the app). Replies that quoted it then say "Original message was deleted".
+* Read state is kept per resident (`message_reads.threadType = 'resident'`,
+  `threadID = userID`). The **Messages** menu badge counts residents with new messages.
+* Code: `admin/partial/resident_messages.php`, `admin/messages.php`,
+  `admin/messages_api.php`, `js/messages.js`.
+
+**Replies** (Messages and comments) are stored in the new table `message_replies`
+(`itemType`, `itemID` → `parentType`, `parentID`; types `report_message`,
+`resident_message`, `announcement_comment`). Existing tables are not changed, so the
+app keeps working; it shows replies as normal messages until it also reads this table.
+
+**For the mobile app:** to show general messages in the resident's chat with the
+barangay, the app should read (and may write) `resident_messages` rows for the
+resident's `userID`, together with their `report_messages`.
+
+**Announcement comments** (table `announcement_comments`) are shown directly under
+each announcement on the **Announcements** page, not in Messages (changed 22 Nov 2026):
+
+* Each card has a comments button ("3 comments · 2 from residents", plus a red
+  "N new" badge). Clicking it opens the comments under the announcement.
+* **Replies to a specific comment** (like Facebook): every comment has **Reply**.
+  Replies are shown indented under the comment; a reply to a reply goes in the same
+  place and names the person it answers. Deleting a barangay comment also deletes the
+  replies below it (the confirmation says how many).
+* The admin can **write a comment** right there (Ctrl + Enter posts), **hide / show**
+  a resident's comment (hidden comments are kept, not deleted), and **delete** the
+  barangay's own comments. Everything updates without reloading the page.
+* New resident comments are marked "New". Opening the comments marks them as read.
+  The **Announcements** menu item shows how many announcements have new comments.
+* Old links such as `messages.php?type=announcement&id=34` now open
+  `announcements.php#comments-34`.
+* Code: `admin/partial/announcement_comments.php` (loading and drawing comments),
+  `admin/announcement_comments_api.php` (post / hide / delete / mark as read),
+  section 4 of `js/announcements.js`.
 
 **For the mobile app (not changed here):** to let residents post on announcements
 and see the new pictures, the app should:
@@ -158,7 +204,13 @@ Report messages already use `report_messages`, which the app may already read an
   nods when the email looks complete, and hops when you log in. It gives a small
   shake if the login fails. The Log In button shows "Logging in…" to prevent
   double clicks.
-* **Other pages:** the mascots on Dashboard, Announcements, Settings and Messages
+* **Dashboard:** the mascot (`css/images/mascot-walk-camera.svg`) plays a 13-second loop in
+  front of a soft scene (clouds, a tree, houses, bushes): it walks in with bouncy steps, lifts a
+  phone and snaps a photo with a soft flash, shows happy eyes, a little hop and a green
+  "captured" check, then walks back and rests. The animation lives inside the SVG, so it works
+  in a plain `<img>` tag anywhere. The earlier waving version is kept as
+  `css/images/mascot-wave-animated.svg` for use elsewhere.
+* **Other pages:** the mascots on Announcements, Settings and Messages
   float slowly and wave when you point at them.
 * All animation is turned off for users whose device is set to reduce motion.
 

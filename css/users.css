@@ -78,3 +78,15 @@
         width: 100%;
     }
 }
+
+/* "Message" button on each resident */
+.users-actions {
+    text-align: right;
+    white-space: nowrap;
+}
+
+@media (max-width: 860px) {
+    .users-actions {
+        text-align: left;
+    }
+}

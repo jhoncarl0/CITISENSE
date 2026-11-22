@@ -9,31 +9,62 @@ if (empty($_SESSION["admin_id"]) || empty($_SESSION["barangay_id"])) {
 require_once __DIR__ . "/../config/database.php";
 require_once __DIR__ . "/partial/helpers.php";
 require_once __DIR__ . "/partial/schema.php";
-require_once __DIR__ . "/partial/messages.php";
+require_once __DIR__ . "/partial/resident_messages.php";
 
 $barangayID = (string) $_SESSION["barangay_id"];
 $schemaReady = csEnsureSchema($conn);
 
-$filter = in_array($_GET["filter"] ?? "", ["report", "announcement"], true) ? $_GET["filter"] : "all";
+/* Announcement comments live on the Announcements page; keep old links working. */
+if (($_GET["type"] ?? "") === "announcement" || ($_GET["filter"] ?? "") === "announcement") {
+    $announceID = (int) ($_GET["id"] ?? 0);
+    header("Location: announcements.php" . ($announceID > 0 ? "#comments-" . $announceID : ""));
+    exit;
+}
+
+/* Old per-report links (e.g. "Open Messages" on a report) open that resident's conversation. */
+if (($_GET["type"] ?? "") === "report" && trim((string) ($_GET["id"] ?? "")) !== "") {
+    $reportID = mb_substr(trim((string) $_GET["id"]), 0, 50);
+    $owner = csReportOwner($conn, $barangayID, $reportID);
+    header("Location: " . ($owner !== "" ? csUrl("messages.php", ["user" => $owner, "report" => $reportID]) : "messages.php"));
+    exit;
+}
+
+/* One conversation per resident. */
 $search = mb_substr(trim((string) ($_GET["search"] ?? "")), 0, 80);
-$type = in_array($_GET["type"] ?? "", ["report", "announcement"], true) ? $_GET["type"] : "";
-$threadID = mb_substr(trim((string) ($_GET["id"] ?? "")), 0, 50);
+$userID = mb_substr(trim((string) ($_GET["user"] ?? "")), 0, 50);
+$preselectReport = mb_substr(trim((string) ($_GET["report"] ?? "")), 0, 50);
 
-$threads = $schemaReady ? csMessageThreads($conn, $barangayID, $filter, $search) : [];
-$thread = ($schemaReady && $type !== "" && $threadID !== "") ? csLoadThread($conn, $barangayID, $type, $threadID) : null;
+$threads = $schemaReady ? csResidentThreads($conn, $barangayID, $search) : [];
+$others = $schemaReady ? csFindResidentsToMessage($conn, $barangayID, $search, array_column($threads, "userID")) : [];
+$conversation = ($schemaReady && $userID !== "") ? csLoadResidentConversation($conn, $barangayID, $userID) : null;
 
-if ($thread) {
-    csMarkThreadRead($conn, $barangayID, $type, $thread["id"]);
+if ($conversation) {
+    csMarkResidentRead($conn, $barangayID, $conversation["userID"]);
     foreach ($threads as &$item) {
-        if ($item["type"] === $type && $item["id"] === $thread["id"]) {
+        if ($item["userID"] === $conversation["userID"]) {
             $item["unread"] = 0;
         }
     }
     unset($item);
+
+    /* Which report a new message is about: the one asked for, else general. */
+    $reportIDs = array_column($conversation["reports"], "id");
+    if (!in_array($preselectReport, $reportIDs, true)) {
+        $preselectReport = "";
+    }
 }
 
 $unreadTotal = count(array_filter($threads, static fn($t) => $t["unread"] > 0));
-$listQuery = ["filter" => $filter !== "all" ? $filter : "", "search" => $search];
+$listQuery = ["search" => $search];
+
+/* Small round avatar: photo or first letter. */
+function msgAvatar(string $name, string $avatar, string $class = ""): string
+{
+    $inner = $avatar !== ""
+        ? '<img src="' . csEscape($avatar) . '" alt="">'
+        : csEscape(strtoupper(mb_substr($name, 0, 1)));
+    return '<span class="cs-avatar ' . $class . '" aria-hidden="true">' . $inner . '</span>';
+}
 
 $pageTitle = "Messages";
 $pageStyles = ["messages.css"];
@@ -48,10 +79,10 @@ include __DIR__ . "/partial/head.php";
     <header class="cs-page-header">
         <div>
             <h1>Messages</h1>
-            <p>Read what residents say about their reports and your announcements, and reply to them.</p>
+            <p>Talk with residents. Each resident has one conversation that includes the messages about all their reports.</p>
         </div>
         <?php if ($unreadTotal > 0): ?>
-            <span class="msg-unread-summary"><i class="bi bi-envelope-exclamation" aria-hidden="true"></i> <?= $unreadTotal ?> <?= $unreadTotal === 1 ? "conversation needs" : "conversations need" ?> a look</span>
+            <span class="msg-unread-summary"><i class="bi bi-envelope-exclamation" aria-hidden="true"></i> <?= $unreadTotal ?> <?= $unreadTotal === 1 ? "resident is" : "residents are" ?> waiting for a reply</span>
         <?php endif; ?>
     </header>
 
@@ -59,46 +90,39 @@ include __DIR__ . "/partial/head.php";
         <?= csSchemaNotice() ?>
     <?php endif; ?>
 
-    <section class="cs-card msg-layout<?= $thread ? " has-thread" : "" ?>">
+    <section class="cs-card msg-layout<?= $conversation ? " has-thread" : "" ?>">
 
         <!-- CONVERSATION LIST -->
         <aside class="msg-sidebar" aria-label="Conversations">
-            <nav class="msg-filters" aria-label="Show conversations">
-                <?php foreach (["all" => "All", "report" => "Reports", "announcement" => "Announcements"] as $key => $label): ?>
-                    <a href="<?= csEscape(csUrl("messages.php", ["filter" => $key !== "all" ? $key : "", "search" => $search])) ?>"
-                       class="msg-filter<?= $filter === $key ? " is-active" : "" ?>"<?= $filter === $key ? ' aria-current="page"' : "" ?>><?= $label ?></a>
-                <?php endforeach; ?>
-            </nav>
-
             <form class="msg-search" method="GET" action="messages.php" role="search">
-                <?php if ($filter !== "all"): ?><input type="hidden" name="filter" value="<?= csEscape($filter) ?>"><?php endif; ?>
-                <label class="cs-sr-only" for="msgSearch">Search conversations</label>
+                <label class="cs-sr-only" for="msgSearch">Search residents</label>
                 <div class="cs-input-icon">
                     <i class="bi bi-search" aria-hidden="true"></i>
-                    <input type="search" id="msgSearch" name="search" class="cs-input" placeholder="Search by name, report ID or title" value="<?= csEscape($search) ?>">
+                    <input type="search" id="msgSearch" name="search" class="cs-input" placeholder="Search a resident by name, email or report ID" value="<?= csEscape($search) ?>">
                 </div>
+                <span class="cs-hint msg-search-hint">To message someone new, search their name.</span>
             </form>
 
-            <?php if ($threads): ?>
+            <?php if ($threads || $others): ?>
                 <ul class="msg-thread-list">
                     <?php foreach ($threads as $item): ?>
-                        <?php $active = $thread && $item["type"] === $thread["type"] && $item["id"] === $thread["id"]; ?>
+                        <?php $active = $conversation && $item["userID"] === $conversation["userID"]; ?>
                         <li>
                             <a class="msg-thread<?= $active ? " is-active" : "" ?><?= $item["unread"] > 0 ? " is-unread" : "" ?>"
-                               href="<?= csEscape(csUrl("messages.php", array_merge($listQuery, ["type" => $item["type"], "id" => $item["id"]]))) ?>"
+                               href="<?= csEscape(csUrl("messages.php", array_merge($listQuery, ["user" => $item["userID"]]))) ?>"
                                <?= $active ? 'aria-current="true"' : "" ?>>
-                                <span class="msg-thread-icon is-<?= $item["type"] ?>">
-                                    <i class="bi <?= $item["type"] === "report" ? "bi-clipboard-check" : "bi-megaphone" ?>" aria-hidden="true"></i>
-                                </span>
+                                <?= msgAvatar($item["name"], $item["avatar"], "msg-thread-avatar") ?>
                                 <span class="msg-thread-text">
                                     <span class="msg-thread-top">
-                                        <strong><?= csEscape($item["title"]) ?></strong>
+                                        <strong><?= csEscape($item["name"]) ?></strong>
                                         <time><?= csEscape(csTimeAgo($item["lastAt"])) ?></time>
                                     </span>
-                                    <span class="msg-thread-sub"><?= csEscape($item["subtitle"]) ?></span>
                                     <span class="msg-thread-last">
                                         <?= $item["lastSender"] === "barangay" ? "You: " : "" ?><?= csEscape(mb_strimwidth($item["lastMessage"], 0, 90, "…")) ?>
                                     </span>
+                                    <?php if ($item["lastReport"] !== ""): ?>
+                                        <span class="msg-thread-sub"><i class="bi bi-clipboard-check" aria-hidden="true"></i> About report <?= csEscape($item["lastReport"]) ?></span>
+                                    <?php endif; ?>
                                 </span>
                                 <?php if ($item["unread"] > 0): ?>
                                     <span class="msg-unread-count" aria-label="<?= $item["unread"] ?> new"><?= $item["unread"] ?></span>
@@ -106,101 +130,196 @@ include __DIR__ . "/partial/head.php";
                             </a>
                         </li>
                     <?php endforeach; ?>
+
+                    <?php if ($others): ?>
+                        <li class="msg-list-heading">Start a new conversation</li>
+                        <?php foreach ($others as $person): ?>
+                            <?php $active = $conversation && $person["userID"] === $conversation["userID"]; ?>
+                            <li>
+                                <a class="msg-thread is-new-contact<?= $active ? " is-active" : "" ?>"
+                                   href="<?= csEscape(csUrl("messages.php", array_merge($listQuery, ["user" => $person["userID"]]))) ?>">
+                                    <?= msgAvatar($person["name"], $person["avatar"], "msg-thread-avatar") ?>
+                                    <span class="msg-thread-text">
+                                        <span class="msg-thread-top"><strong><?= csEscape($person["name"]) ?></strong></span>
+                                        <span class="msg-thread-sub"><?= csEscape($person["email"] !== "" ? $person["email"] : "No messages yet") ?></span>
+                                    </span>
+                                    <i class="bi bi-pencil-square msg-new-icon" aria-hidden="true"></i>
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </ul>
             <?php else: ?>
                 <div class="cs-empty msg-empty-list">
                     <span class="cs-empty-icon"><i class="bi bi-chat-dots" aria-hidden="true"></i></span>
-                    <h3><?= $search !== "" ? "No conversations found" : "No messages yet" ?></h3>
-                    <p><?= $search !== "" ? "Try another name or report ID." : "When residents send a message about a report or comment on an announcement in the CitiSense app, it will appear here." ?></p>
+                    <h3><?= $search !== "" ? "No residents found" : "No messages yet" ?></h3>
+                    <p><?= $search !== ""
+                        ? "No resident matches “" . csEscape($search) . "”. Try another name, email or report ID."
+                        : "When residents send a message in the CitiSense app, it will appear here. To message a resident, search their name above or use the Message button on the Residents page." ?></p>
                 </div>
             <?php endif; ?>
         </aside>
 
         <!-- CONVERSATION -->
         <div class="msg-main">
-            <?php if ($thread): ?>
+            <?php if ($conversation): ?>
                 <header class="msg-thread-header">
                     <a class="cs-btn cs-btn-ghost cs-btn-sm msg-back" href="<?= csEscape(csUrl("messages.php", $listQuery)) ?>">
                         <i class="bi bi-arrow-left" aria-hidden="true"></i> All conversations
                     </a>
                     <div class="msg-thread-heading">
-                        <?php if ($thread["image"] !== ""): ?>
-                            <img class="msg-thread-photo" src="<?= csEscape($thread["image"]) ?>" alt="">
-                        <?php else: ?>
-                            <span class="msg-thread-icon is-<?= $thread["type"] ?>"><i class="bi <?= $thread["type"] === "report" ? "bi-clipboard-check" : "bi-megaphone" ?>" aria-hidden="true"></i></span>
-                        <?php endif; ?>
+                        <?= msgAvatar($conversation["name"], $conversation["avatar"], "msg-profile-avatar") ?>
                         <div>
-                            <h2><?= csEscape($thread["title"]) ?></h2>
-                            <p><?= csEscape($thread["subtitle"]) ?></p>
+                            <h2><?= csEscape($conversation["name"]) ?></h2>
+                            <p>
+                                Resident
+                                · <?= count($conversation["reports"]) ?> <?= count($conversation["reports"]) === 1 ? "report" : "reports" ?>
+                                <?php if ($conversation["dateJoined"] !== ""): ?>
+                                    · Joined <?= csEscape(csDate($conversation["dateJoined"], "F Y")) ?>
+                                <?php endif; ?>
+                            </p>
                         </div>
-                        <?php if ($thread["status"] !== ""): ?>
-                            <?= csStatusBadge($thread["status"]) ?>
-                        <?php endif; ?>
+                        <button type="button" class="cs-btn cs-btn-ghost cs-btn-sm" aria-expanded="false" aria-controls="msgProfile" data-profile-toggle>
+                            <i class="bi bi-person-vcard" aria-hidden="true"></i> Profile
+                        </button>
                     </div>
-                    <?php if ($thread["description"] !== ""): ?>
-                        <details class="msg-context">
-                            <summary><?= $thread["type"] === "report" ? "What the resident reported" : "Announcement text" ?></summary>
-                            <p><?= nl2br(csEscape($thread["description"])) ?></p>
-                        </details>
-                    <?php endif; ?>
-                    <div class="msg-thread-links">
-                        <?php if ($thread["type"] === "report"): ?>
-                            <a href="<?= csEscape(csUrl("reports.php", ["tab" => "all", "search" => $thread["id"]])) ?>"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> Open this report</a>
-                        <?php else: ?>
-                            <a href="<?= csEscape(csUrl("announcements.php", ["search" => $thread["title"]])) ?>"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> Open this announcement</a>
-                        <?php endif; ?>
-                    </div>
+
                 </header>
 
+                <div class="msg-body">
+                    <!-- Resident profile -->
+                    <aside class="msg-profile" id="msgProfile" aria-label="Profile of <?= csEscape($conversation["name"]) ?>" hidden>
+                        <div class="msg-profile-head">
+                            <h3>Profile</h3>
+                            <button type="button" class="cs-btn cs-btn-ghost cs-btn-sm" data-profile-close aria-label="Close profile">
+                                <i class="bi bi-x-lg" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <dl class="msg-profile-rows">
+                            <div>
+                                <dt><i class="bi bi-envelope" aria-hidden="true"></i> Email</dt>
+                                <dd><?= $conversation["email"] !== ""
+                                    ? '<a href="mailto:' . csEscape($conversation["email"]) . '">' . csEscape($conversation["email"]) . '</a>'
+                                    : '<span class="cs-subtle">Not provided</span>' ?></dd>
+                            </div>
+                            <div>
+                                <dt><i class="bi bi-telephone" aria-hidden="true"></i> Contact number</dt>
+                                <dd><?= $conversation["contactNo"] !== ""
+                                    ? '<a href="tel:' . csEscape(preg_replace("/[^0-9+]/", "", $conversation["contactNo"])) . '">' . csEscape($conversation["contactNo"]) . '</a>'
+                                    : '<span class="cs-subtle">Not provided</span>' ?></dd>
+                            </div>
+                            <div>
+                                <dt><i class="bi bi-calendar3" aria-hidden="true"></i> Member since</dt>
+                                <dd><?= csEscape(csDate($conversation["dateJoined"], "F j, Y", "Unknown")) ?></dd>
+                            </div>
+                        </dl>
+
+                        <h3 class="msg-profile-title">Reports (<?= count($conversation["reports"]) ?>)</h3>
+                        <?php if ($conversation["reports"]): ?>
+                            <ul class="msg-profile-reports">
+                                <?php foreach ($conversation["reports"] as $report): ?>
+                                    <li>
+                                        <a href="<?= csEscape(csUrl("reports.php", ["tab" => "all", "search" => $report["id"]])) ?>">
+                                            <span class="msg-report-icon"><i class="bi <?= csEscape(csCategoryIcon($report["category"])) ?>" aria-hidden="true"></i></span>
+                                            <span class="msg-report-text">
+                                                <strong><?= csEscape($report["id"]) ?> · <?= csEscape($report["category"]) ?></strong>
+                                                <span><?= csEscape(csDate($report["date"], "M j, Y")) ?><?= $report["address"] !== "" ? " · " . csEscape($report["address"]) : "" ?></span>
+                                            </span>
+                                            <?= csStatusBadge($report["status"]) ?>
+                                        </a>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php else: ?>
+                            <p class="cs-subtle">This resident has not sent any reports yet.</p>
+                        <?php endif; ?>
+                    </aside>
                 <div class="msg-messages" id="msgMessages" tabindex="0" aria-label="Messages">
-                    <?php if (!$thread["messages"]): ?>
+                    <?php if (!$conversation["messages"]): ?>
                         <div class="msg-no-messages">
                             <i class="bi bi-chat-text" aria-hidden="true"></i>
-                            <p><?= $thread["type"] === "report"
-                                ? "No messages yet. You can send the resident a message about this report below."
-                                : "No comments yet. Replies you write here will be shown under the announcement." ?></p>
+                            <p>No messages with <?= csEscape($conversation["name"]) ?> yet. Write the first message below.</p>
                         </div>
                     <?php endif; ?>
 
                     <?php $lastDay = ""; ?>
-                    <?php foreach ($thread["messages"] as $message): ?>
+                    <?php foreach ($conversation["messages"] as $message): ?>
                         <?php $day = csDate($message["at"], "l, F j, Y"); ?>
                         <?php if ($day !== $lastDay): $lastDay = $day; ?>
                             <p class="msg-day"><span><?= csEscape($day) ?></span></p>
                         <?php endif; ?>
-                        <div class="msg-bubble-row<?= $message["fromBarangay"] ? " is-mine" : "" ?><?= $message["hidden"] ? " is-hidden" : "" ?>">
+                        <?php $senderLabel = $message["fromBarangay"] ? "Barangay (" . $message["name"] . ")" : $message["name"]; ?>
+                        <div class="msg-bubble-row<?= $message["fromBarangay"] ? " is-mine" : "" ?><?= $message["isNew"] ? " is-new" : "" ?>"
+                             id="msg-<?= csEscape($message["key"]) ?>"
+                             data-key="<?= csEscape($message["key"]) ?>"
+                             data-report="<?= csEscape($message["reportID"]) ?>"
+                             data-name="<?= csEscape($senderLabel) ?>"
+                             data-preview="<?= csEscape(csReplyPreview($message["message"])) ?>">
                             <?php if (!$message["fromBarangay"]): ?>
-                                <span class="cs-avatar msg-avatar" aria-hidden="true">
-                                    <?php if ($message["avatar"] !== ""): ?>
-                                        <img src="<?= csEscape($message["avatar"]) ?>" alt="">
-                                    <?php else: ?>
-                                        <?= csEscape(strtoupper(mb_substr($message["name"], 0, 1))) ?>
-                                    <?php endif; ?>
-                                </span>
+                                <?= msgAvatar($message["name"], $message["avatar"], "msg-avatar") ?>
+                            <?php endif; ?>
+                            <div class="msg-bubble-wrap">
+                            <?php if ($message["replyTo"]): ?>
+                                <?php if ($message["replyTo"]["missing"]): ?>
+                                    <span class="msg-quote is-missing"><i class="bi bi-reply" aria-hidden="true"></i> Original message was deleted</span>
+                                <?php else: ?>
+                                    <a class="msg-quote" href="#msg-<?= csEscape($message["replyTo"]["key"]) ?>" data-jump="<?= csEscape($message["replyTo"]["key"]) ?>">
+                                        <span class="msg-quote-who"><i class="bi bi-reply" aria-hidden="true"></i> Replying to <?= csEscape($message["replyTo"]["name"]) ?></span>
+                                        <span class="msg-quote-text"><?= csEscape($message["replyTo"]["text"]) ?></span>
+                                    </a>
+                                <?php endif; ?>
                             <?php endif; ?>
                             <div class="msg-bubble">
                                 <span class="msg-sender">
                                     <?= csEscape($message["fromBarangay"] ? "Barangay (" . $message["name"] . ")" : $message["name"]) ?>
                                     <time><?= csEscape(csDate($message["at"], "g:i A")) ?></time>
                                 </span>
+                                <?php if ($message["reportLabel"] !== ""): ?>
+                                    <a class="msg-report-tag" href="<?= csEscape(csUrl("reports.php", ["tab" => "all", "search" => $message["reportID"]])) ?>">
+                                        <i class="bi bi-clipboard-check" aria-hidden="true"></i> <?= csEscape($message["reportLabel"]) ?>
+                                    </a>
+                                <?php endif; ?>
                                 <p><?= nl2br(csEscape($message["message"])) ?></p>
-                                <?php if ($message["hidden"]): ?>
-                                    <span class="msg-hidden-note"><i class="bi bi-eye-slash" aria-hidden="true"></i> Hidden from residents</span>
-                                <?php endif; ?>
-                                <?php if ($thread["type"] === "announcement" && !$message["fromBarangay"]): ?>
-                                    <button type="button" class="msg-hide-btn" data-hide-comment="<?= $message["id"] ?>" data-hidden="<?= $message["hidden"] ? "0" : "1" ?>">
-                                        <?= $message["hidden"] ? "Show again" : "Hide comment" ?>
-                                    </button>
-                                <?php endif; ?>
+                            </div>
+                            </div>
+                            <div class="msg-actions">
+                                <button type="button" class="msg-action" data-msg-reply title="Reply" aria-label="Reply to this message">
+                                    <i class="bi bi-reply-fill" aria-hidden="true"></i><span>Reply</span>
+                                </button>
+                                <button type="button" class="msg-action is-danger" data-msg-delete title="Delete" aria-label="Delete this message">
+                                    <i class="bi bi-trash" aria-hidden="true"></i><span>Delete</span>
+                                </button>
                             </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
+                </div>
 
-                <form class="msg-reply" id="msgReplyForm" data-type="<?= csEscape($thread["type"]) ?>" data-id="<?= csEscape($thread["id"]) ?>">
-                    <label class="cs-label" for="msgReply">
-                        <?= $thread["type"] === "report" ? "Reply to the resident" : "Reply under this announcement" ?>
-                    </label>
+                <form class="msg-reply" id="msgReplyForm" data-user="<?= csEscape($conversation["userID"]) ?>">
+                    <div class="msg-reply-top">
+                        <label class="cs-label" for="msgReply">Message <?= csEscape($conversation["name"]) ?></label>
+                        <label class="msg-about">
+                            <span>About</span>
+                            <select id="msgAbout" class="cs-select">
+                                <option value=""<?= $preselectReport === "" ? " selected" : "" ?>>General message (not about a report)</option>
+                                <?php foreach ($conversation["reports"] as $report): ?>
+                                    <option value="<?= csEscape($report["id"]) ?>"<?= $preselectReport === $report["id"] ? " selected" : "" ?>>
+                                        Report <?= csEscape($report["id"]) ?> · <?= csEscape($report["category"]) ?> (<?= csEscape($report["status"]) ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="msg-replying" id="msgReplying" hidden>
+                        <i class="bi bi-reply-fill" aria-hidden="true"></i>
+                        <div>
+                            <strong>Replying to <span data-replying-name></span></strong>
+                            <span data-replying-text></span>
+                        </div>
+                        <button type="button" class="cs-btn cs-btn-ghost cs-btn-sm" data-replying-cancel aria-label="Cancel reply">
+                            <i class="bi bi-x-lg" aria-hidden="true"></i>
+                        </button>
+                    </div>
                     <div class="msg-reply-row">
                         <textarea id="msgReply" class="cs-textarea" rows="2" maxlength="2000"
                                   placeholder="Type your message… (Ctrl + Enter to send)" required></textarea>
@@ -208,17 +327,15 @@ include __DIR__ . "/partial/head.php";
                             <i class="bi bi-send" aria-hidden="true"></i> Send
                         </button>
                     </div>
-                    <span class="cs-hint">
-                        <?= $thread["type"] === "report"
-                            ? "The resident will see your reply in the CitiSense app and get a notification."
-                            : "Your reply is shown to everyone who views this announcement in the app." ?>
-                    </span>
+                    <span class="cs-hint" id="msgAboutHint"
+                          data-general="The resident gets a notification and sees this message in their chat with the barangay."
+                          data-report="The resident gets a notification and sees this message under that report in the CitiSense app."></span>
                 </form>
             <?php else: ?>
                 <div class="msg-placeholder">
                     <img src="../css/images/mascot-bell.png" alt="" class="msg-placeholder-mascot">
-                    <h2>Choose a conversation</h2>
-                    <p>Select a conversation on the left to read the messages and reply.</p>
+                    <h2>Choose a resident</h2>
+                    <p>Select a conversation on the left to see the resident's messages and profile, and to reply.</p>
                 </div>
             <?php endif; ?>
         </div>

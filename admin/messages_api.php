@@ -1,17 +1,25 @@
 <?php
 /*
- * CitiSense — barangay replies to residents.
+ * CitiSense — barangay messages to residents (Messages page).
  *
  * POST JSON:
- *   { "action": "reply", "type": "report", "id": "REP024", "message": "..." }
- *       Adds a barangay message to report_messages and notifies the resident
- *       (notification table, like status updates).
- *   { "action": "reply", "type": "announcement", "id": "34", "message": "..." }
- *       Adds a barangay reply to announcement_comments.
- *   { "action": "hide", "commentID": 12, "hidden": true }
- *       Hides (or shows again) a resident's comment on an announcement.
+ *   { "action": "send", "userID": "USR001", "reportID": "REP024", "message": "..." }
+ *       About a report: added to report_messages (the chat under that report
+ *       in the app). reportID must be one of this resident's reports.
+ *   { "action": "send", "userID": "USR001", "reportID": "", "message": "..." }
+ *       General message: added to resident_messages.
+ *   Both notify the resident (notification table, like status updates).
+ *   Optional "replyTo": "r12" | "d5" makes it a reply to that message
+ *   (report_messages id 12 / resident_messages id 5), saved in message_replies.
  *
- * Only conversations of the administrator's own barangay are accepted.
+ *   { "action": "delete", "userID": "USR001", "key": "r12" }
+ *       Deletes one message of that resident's conversation for everyone.
+ *
+ *   { "action": "reply", "type": "report", "id": "REP024", "message": "..." }
+ *       Older form, still accepted: a message about that report.
+ *
+ * Comments on announcements are handled by announcement_comments_api.php.
+ * Only residents and reports of the administrator's own barangay are accepted.
  */
 
 session_start();
@@ -55,109 +63,137 @@ try {
         messagesResponse(500, ["success" => false, "message" => "The database update is needed before messages can be sent."]);
     }
 
-    /* ------------------------------------------------------------ reply */
-    if ($action === "reply") {
-        $type = (string) ($input["type"] ?? "");
-        $id = trim((string) ($input["id"] ?? ""));
+    require_once __DIR__ . "/partial/resident_messages.php";
+
+    /* ------------------------------------------------------------- send */
+    if ($action === "send" || $action === "reply") {
+        if ($action === "reply") {
+            // Older form: { type: "report", id: "REP024" }
+            if ((string) ($input["type"] ?? "") !== "report") {
+                messagesResponse(400, ["success" => false, "message" => "Invalid conversation."]);
+            }
+            $reportID = trim((string) ($input["id"] ?? ""));
+            $userID = csReportOwner($conn, $barangayID, $reportID);
+        } else {
+            $userID = trim((string) ($input["userID"] ?? ""));
+            $reportID = trim((string) ($input["reportID"] ?? ""));
+        }
         $message = trim((string) ($input["message"] ?? ""));
 
-        if (!in_array($type, ["report", "announcement"], true) || $id === "" || strlen($id) > 50) {
+        if ($userID === "" || strlen($userID) > 50 || strlen($reportID) > 50) {
             messagesResponse(400, ["success" => false, "message" => "Invalid conversation."]);
         }
-
         if ($message === "") {
             messagesResponse(400, ["success" => false, "message" => "Please type a message first."]);
         }
-
         if (mb_strlen($message) > 2000) {
             messagesResponse(400, ["success" => false, "message" => "The message is too long. Please keep it under 2,000 characters."]);
         }
 
-        if ($type === "report") {
-            $stmt = $conn->prepare("SELECT reportID, userID FROM reports WHERE reportID = ? AND barangayID = ? LIMIT 1");
-            $stmt->bind_param("ss", $id, $barangayID);
-            $stmt->execute();
-            $report = $stmt->get_result()->fetch_assoc();
-            $stmt->close();
+        $resident = csLoadResidentConversation($conn, $barangayID, $userID);
+        if (!$resident) {
+            messagesResponse(404, ["success" => false, "message" => "Resident not found in your barangay."]);
+        }
+        if ($reportID !== "" && !in_array($reportID, array_column($resident["reports"], "id"), true)) {
+            messagesResponse(404, ["success" => false, "message" => "That report does not belong to this resident."]);
+        }
 
-            if (!$report) {
-                messagesResponse(404, ["success" => false, "message" => "Report not found in your barangay."]);
+        $replyTo = trim((string) ($input["replyTo"] ?? ""));
+        $replyParts = null;
+        if ($replyTo !== "") {
+            $replyParts = csMessageKeyParts($replyTo);
+            if (!$replyParts || !in_array($replyTo, array_column($resident["messages"], "key"), true)) {
+                messagesResponse(404, ["success" => false, "message" => "The message you are replying to was not found. It may have been deleted."]);
             }
+        }
 
+        $preview = mb_strimwidth($message, 0, 120, "…");
+        $notifID = "N" . bin2hex(random_bytes(16));
+
+        if ($reportID !== "") {
             $conn->begin_transaction();
 
             $stmt = $conn->prepare(
                 "INSERT INTO report_messages (reportID, senderType, senderID, message) VALUES (?, 'barangay', ?, ?)"
             );
-            $stmt->bind_param("sss", $id, $adminID, $message);
+            $stmt->bind_param("sss", $reportID, $adminID, $message);
             $stmt->execute();
+            $newKey = ["report_message", (int) $conn->insert_id];
             $stmt->close();
 
-            $notifID = "N" . bin2hex(random_bytes(16));
-            $preview = mb_strimwidth($message, 0, 120, "…");
-            $notice = "The barangay replied about your report " . $id . ": " . $preview;
-            $residentID = (string) $report["userID"];
+            if ($replyParts) {
+                csSaveReplyLink($conn, $newKey[0], $newKey[1], $replyParts[0], $replyParts[1]);
+            }
 
+            $notice = "The barangay replied about your report " . $reportID . ": " . $preview;
             $stmt = $conn->prepare(
                 "INSERT INTO notification (notifID, userID, reportID, message, isRead) VALUES (?, ?, ?, ?, 0)"
             );
-            $stmt->bind_param("ssss", $notifID, $residentID, $id, $notice);
+            $stmt->bind_param("ssss", $notifID, $userID, $reportID, $notice);
             $stmt->execute();
             $stmt->close();
 
             $conn->commit();
         } else {
-            $announceID = (int) $id;
-            $stmt = $conn->prepare("SELECT announceID FROM announcements WHERE announceID = ? AND barangayID = ? LIMIT 1");
-            $stmt->bind_param("is", $announceID, $barangayID);
+            $stmt = $conn->prepare(
+                "INSERT INTO resident_messages (barangayID, userID, senderType, senderID, message) VALUES (?, ?, 'barangay', ?, ?)"
+            );
+            $stmt->bind_param("ssss", $barangayID, $userID, $adminID, $message);
             $stmt->execute();
-            $found = $stmt->get_result()->fetch_assoc();
+            $newKey = ["resident_message", (int) $conn->insert_id];
             $stmt->close();
 
-            if (!$found) {
-                messagesResponse(404, ["success" => false, "message" => "Announcement not found in your barangay."]);
+            if ($replyParts) {
+                csSaveReplyLink($conn, $newKey[0], $newKey[1], $replyParts[0], $replyParts[1]);
             }
 
-            $stmt = $conn->prepare(
-                "INSERT INTO announcement_comments (announceID, senderType, senderID, message) VALUES (?, 'barangay', ?, ?)"
-            );
-            $stmt->bind_param("iss", $announceID, $adminID, $message);
-            $stmt->execute();
-            $stmt->close();
+            // The notification table may require a report; the message itself is saved either way.
+            try {
+                $notice = "New message from the barangay: " . $preview;
+                $stmt = $conn->prepare(
+                    "INSERT INTO notification (notifID, userID, reportID, message, isRead) VALUES (?, ?, NULL, ?, 0)"
+                );
+                $stmt->bind_param("sss", $notifID, $userID, $notice);
+                $stmt->execute();
+                $stmt->close();
+            } catch (Throwable $notifyError) {
+                error_log("Messages API: general message saved, notification skipped: " . $notifyError->getMessage());
+            }
         }
 
-        messagesResponse(200, ["success" => true, "message" => "Your reply was sent."]);
+        csMarkResidentRead($conn, $barangayID, $userID);
+
+        messagesResponse(200, ["success" => true, "message" => "Your message was sent to " . $resident["name"] . "."]);
     }
 
-    /* ------------------------------------------------------------- hide */
-    if ($action === "hide") {
-        $commentID = (int) ($input["commentID"] ?? 0);
-        $hidden = !empty($input["hidden"]) ? 1 : 0;
+    /* ----------------------------------------------------------- delete */
+    if ($action === "delete") {
+        $userID = trim((string) ($input["userID"] ?? ""));
+        $key = trim((string) ($input["key"] ?? ""));
+        $parts = csMessageKeyParts($key);
 
-        $stmt = $conn->prepare(
-            "SELECT c.commentID FROM announcement_comments c
-             INNER JOIN announcements a ON a.announceID = c.announceID
-             WHERE c.commentID = ? AND a.barangayID = ? AND c.senderType = 'resident'
-             LIMIT 1"
-        );
-        $stmt->bind_param("is", $commentID, $barangayID);
-        $stmt->execute();
-        $found = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-
-        if (!$found) {
-            messagesResponse(404, ["success" => false, "message" => "Comment not found."]);
+        $resident = ($userID !== "" && strlen($userID) <= 50) ? csLoadResidentConversation($conn, $barangayID, $userID) : null;
+        if (!$resident || !$parts || !in_array($key, array_column($resident["messages"], "key"), true)) {
+            messagesResponse(404, ["success" => false, "message" => "Message not found. It may already have been deleted."]);
         }
 
-        $stmt = $conn->prepare("UPDATE announcement_comments SET isHidden = ? WHERE commentID = ?");
-        $stmt->bind_param("ii", $hidden, $commentID);
+        [$type, $id] = $parts;
+        if ($type === "report_message") {
+            $stmt = $conn->prepare("DELETE FROM report_messages WHERE id = ?");
+        } else {
+            $stmt = $conn->prepare("DELETE FROM resident_messages WHERE messageID = ? AND barangayID = ?");
+        }
+        if ($type === "report_message") {
+            $stmt->bind_param("i", $id);
+        } else {
+            $stmt->bind_param("is", $id, $barangayID);
+        }
         $stmt->execute();
         $stmt->close();
 
-        messagesResponse(200, [
-            "success" => true,
-            "message" => $hidden ? "The comment is now hidden from residents." : "The comment is visible again.",
-        ]);
+        csDeleteReplyLink($conn, $type, $id);
+
+        messagesResponse(200, ["success" => true, "message" => "The message was deleted."]);
     }
 
     messagesResponse(400, ["success" => false, "message" => "Unknown action."]);
