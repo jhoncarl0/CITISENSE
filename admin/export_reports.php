@@ -198,7 +198,7 @@ function exportCsvSafe($value): string
 
 
 
-    return preg_match('/^**\s***[=+\\-@]/u', $value)
+    return preg_match('/^\s*[=+\-@]/u', $value)
 
         ? "'" . $value
 
@@ -595,6 +595,12 @@ $rangeEndLabel = $period === 'day'
 /* =========================================================
    CSV EXPORT - SELECTED REPORTING PERIOD ONLY
 ========================================================= */
+
+// Throw away anything printed so far (e.g. a stray blank line from an included
+// file), so the downloaded file starts with its real first byte.
+while (ob_get_level() > 0) {
+    ob_end_clean();
+}
 
 if ($format === 'csv') {
 

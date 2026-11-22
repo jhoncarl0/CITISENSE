@@ -275,3 +275,15 @@ If the photos are on another computer or a hosted server, set `CS_MEDIA_BASE_URL
 in `admin/partial/helpers.php` to that folder's web address instead.
 **Database Check** (`admin/db_check.php`) shows which folder the photos were found
 in, or which ones are missing and where it looked.
+
+## Fixes (23 Nov 2026)
+
+* **Change Status → Back to New** no longer asks for a message: the report simply returns to Pending (the server also ignores a message for this).
+* **Report details (View)** now follow the report form of the CitiSense app: numbered sections **1 Photo · 2 Issue Category · 3 Location · 4 Description** ("What the resident said" is now "Description"). Location shows a small map with a pin (Leaflet + OpenStreetMap, like the app) and an "Open in Google Maps" link.
+* **Download Summary (PDF / Word / CSV)**: `config/database.php` started with an empty line before `<?php`, which was sent before every file and broke the downloads. Removed; the export also clears any stray output before sending a file. PDF and Word need the Composer packages: the hosting must run `composer install` (the `vendor/` folder is not in Git).
+* **Location** is no longer shown on the Reports and Possible Duplicates lists, only in View / View Report.
+* **Report cards** (Reports, Possible Duplicates) list their details one per line with labels (Report ID, Type of issue, Submitted, Reported by).
+* **Expected completion date** cannot be earlier than the day the report was accepted (the latest move to In Progress); the same day is allowed. Checked in the browser and on the server.
+* **Uploads on hosting (Railway volume)**, admin service environment variables:
+  * `CS_UPLOAD_ROOT`: the volume's mount path (e.g. `/data`). Admin profile pictures and announcement pictures are saved there and served through `admin/media.php`.
+  * `CS_MEDIA_FALLBACK_URL`: the mobile API's address (e.g. `https://citisense-api-production.up.railway.app/`). Residents' report photos and profile pictures that are not on the admin server are loaded from there.

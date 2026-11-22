@@ -22,7 +22,9 @@ if (!function_exists("csSaveUploadedImage")) {
     /** Absolute path of the project's uploads/<subfolder>/ directory. */
     function csUploadDir(string $subfolder): string
     {
-        return dirname(__DIR__, 2) . "/uploads/" . trim($subfolder, "/") . "/";
+        // On hosting with a persistent volume (CS_UPLOAD_ROOT), save there.
+        $root = (defined("CS_UPLOAD_ROOT") && CS_UPLOAD_ROOT !== "") ? CS_UPLOAD_ROOT : dirname(__DIR__, 2);
+        return $root . "/uploads/" . trim($subfolder, "/") . "/";
     }
 
     /** Turn a multiple-file $_FILES entry into a list of single files. */

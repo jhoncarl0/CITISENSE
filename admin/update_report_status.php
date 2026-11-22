@@ -288,6 +288,11 @@ try {
     $statusID = trim((string) ($input["statusID"] ?? ""));
     $remarks = trim((string) ($input["remarks"] ?? ""));
 
+    /* Back to New (Pending) restores the original status: no message is kept. */
+    if ($statusID === "STAT001") {
+        $remarks = "";
+    }
+
     /* "rejected" (or the Rejected status ID) is accepted as a target. */
     require_once __DIR__ . "/partial/schema.php";
     $rejectedStatusID = csRejectedStatusID($conn);

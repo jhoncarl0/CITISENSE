@@ -25,6 +25,27 @@
  * CS_MEDIA_BASE_URL to that folder's web address (keep the slash at the end):
  *     define("CS_MEDIA_BASE_URL", "http://192.168.1.10/citisense_api/");
  */
+/*
+ * Hosting (e.g. Railway) — set these as environment variables of the admin service:
+ *   CS_UPLOAD_ROOT         folder of a persistent volume, e.g. /data. Pictures the
+ *                          admin uploads (profile picture, announcement pictures) are
+ *                          saved in CS_UPLOAD_ROOT/uploads/... and photos are also
+ *                          looked for there. Without it, the project folder is used.
+ *   CS_MEDIA_FALLBACK_URL  web address of the server that keeps the residents'
+ *                          photos (the mobile app's API), with a slash at the end,
+ *                          e.g. https://citisense-api-production.up.railway.app/
+ *                          Used only for photos that are not found on this server.
+ */
+if (!defined("CS_UPLOAD_ROOT")) {
+    $csUploadRoot = rtrim(str_replace("\\", "/", trim((string) getenv("CS_UPLOAD_ROOT"))), "/");
+    define("CS_UPLOAD_ROOT", $csUploadRoot);
+}
+
+if (!defined("CS_MEDIA_FALLBACK_URL")) {
+    $csFallback = trim((string) getenv("CS_MEDIA_FALLBACK_URL"));
+    define("CS_MEDIA_FALLBACK_URL", $csFallback !== "" ? rtrim($csFallback, "/") . "/" : "");
+}
+
 if (!defined("CS_MEDIA_ROOTS")) {
     // Extra folders on this computer that contain the "uploads" folder, e.g.
     // ["C:/xampp/htdocs/citisense_api"]
@@ -49,6 +70,11 @@ if (!function_exists("csMediaRoots")) {
         $project = dirname(__DIR__, 2);
         $htdocs = dirname($project);
         $list = [$project, $project . "/api"];
+
+        if (CS_UPLOAD_ROOT !== "") {
+            array_unshift($list, CS_UPLOAD_ROOT);         // the persistent volume
+            $list[] = CS_UPLOAD_ROOT . "/admin";          // older admin profile picture paths
+        }
 
         foreach ((array) CS_MEDIA_ROOTS as $extra) {
             $list[] = (string) $extra;
@@ -142,6 +168,11 @@ if (!function_exists("csEscape")) {
 
         $file = csFindMediaFile($clean);
         $project = str_replace("\\", "/", (string) realpath(dirname(__DIR__, 2))) . "/";
+
+        // Not found on this server: ask the server that keeps the residents' photos.
+        if ($file === "" && CS_MEDIA_FALLBACK_URL !== "") {
+            return CS_MEDIA_FALLBACK_URL . implode("/", array_map("rawurlencode", explode("/", $clean)));
+        }
 
         // Not found anywhere: keep the normal link (the page shows "Photo not available").
         if ($file === "") {

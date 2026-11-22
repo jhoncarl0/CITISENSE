@@ -52,14 +52,24 @@ function dupReportRow(array $report, bool $isMain, string $groupID, string $main
                 <?php if ($isMain): ?>
                     <span class="dup-main-tag"><i class="bi bi-star-fill" aria-hidden="true"></i> Suggested main report</span>
                 <?php endif; ?>
-                <h3><?= csEscape($report["categoryName"]) ?> <span class="cs-subtle">· ID <?= csEscape($report["reportID"]) ?></span></h3>
+                <h3><?= csEscape($report["categoryName"]) ?></h3>
                 <?= csStatusBadge($report["statusName"]) ?>
             </div>
-            <p class="dup-line"><i class="bi bi-geo-alt" aria-hidden="true"></i><?= csEscape(($report["address"] ?? "") !== "" ? $report["address"] : "Location not provided") ?></p>
-            <p class="dup-line dup-meta">
-                <?= csEscape(csDate($report["dateReported"], "M j, Y · g:i A")) ?>
-                <?php if ($report["resident"] !== ""): ?> · by <?= csEscape($report["resident"]) ?><?php endif; ?>
-            </p>
+            <!-- One detail per line, easier to read. The location shows only in View Report. -->
+            <dl class="cs-facts">
+                <div>
+                    <dt>Report ID</dt>
+                    <dd><?= csEscape($report["reportID"]) ?></dd>
+                </div>
+                <div>
+                    <dt>Submitted</dt>
+                    <dd><?= csEscape(csDate($report["dateReported"], "M j, Y · g:i A")) ?></dd>
+                </div>
+                <div>
+                    <dt>Reported by</dt>
+                    <dd><?= csEscape($report["resident"] !== "" ? $report["resident"] : "Resident") ?></dd>
+                </div>
+            </dl>
             <?php if (trim((string) $report["description"]) !== ""): ?>
                 <p class="dup-description">“<?= csEscape(mb_strimwidth(trim((string) $report["description"]), 0, 180, "…")) ?>”</p>
             <?php endif; ?>

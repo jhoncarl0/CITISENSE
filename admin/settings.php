@@ -11,6 +11,7 @@ if (
 }
 
 require_once __DIR__ . "/../config/database.php";
+require_once __DIR__ . "/partial/helpers.php";
 
 $adminID = (string) $_SESSION["admin_id"];
 $barangayID = (string) $_SESSION["barangay_id"];
@@ -159,8 +160,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     $message = "Use a valid JPG, PNG, or WEBP image.";
                     $messageType = "error";
                 } else {
+                    // On hosting with a persistent volume (CS_UPLOAD_ROOT), save there.
+                    $profileBase = CS_UPLOAD_ROOT !== ""
+                        ? CS_UPLOAD_ROOT . "/admin"
+                        : __DIR__;
+
                     $uploadDirectory =
-                        __DIR__ . "/uploads/profile_pictures/";
+                        $profileBase . "/uploads/profile_pictures/";
 
                     if (
                         !is_dir($uploadDirectory) &&
@@ -223,7 +229,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                         "uploads/profile_pictures/"
                                     )
                                 ) {
-                                    $oldFile = __DIR__ . "/" . $oldPicture;
+                                    $oldFile = $profileBase . "/" . $oldPicture;
 
                                     $realUploadDirectory =
                                         realpath($uploadDirectory);
@@ -401,7 +407,7 @@ $initials = getInitials(
 $profilePic = trim((string) ($admin["profilePic"] ?? ""));
 
 $profilePicUrl = $profilePic !== ""
-    ? $profilePic
+    ? csMediaUrl($profilePic)
     : "";
 
 $dateJoined = !empty($admin["dateJoined"])
