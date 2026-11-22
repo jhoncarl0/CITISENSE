@@ -158,7 +158,10 @@ Report messages already use `report_messages`, which the app may already read an
   nods when the email looks complete, and hops when you log in. It gives a small
   shake if the login fails. The Log In button shows "Logging in…" to prevent
   double clicks.
-* **Other pages:** the mascots on Dashboard, Announcements, Settings and Messages
+* **Dashboard:** the mascot (`css/images/mascot-wave-animated.svg`) greets the user in a
+  seamless loop: a short wave, natural blinks, a gentle breathing float, and a slight head
+  tilt. The animation lives inside the SVG, so it works in a plain `<img>` tag anywhere.
+* **Other pages:** the mascots on Announcements, Settings and Messages
   float slowly and wave when you point at them.
 * All animation is turned off for users whose device is set to reduce motion.
 

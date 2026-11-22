@@ -1,0 +1,204 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 380" role="img" aria-label="CitiSense mascot waving hello">
+  <!--
+    CitiSense mascot: animated greeting loop.
+    Every motion is a separate, self-contained CSS loop that starts and ends at
+    the rest pose, so the animation repeats without a visible jump:
+      float   3s  gentle up/down, like breathing or hovering
+      tilt    6s  slight head/body tilt toward the waving hand
+      wave    6s  a short friendly wave, then a calm rest
+      blink   9s  a single blink, then a natural double blink
+      flag    3s  a very soft flutter
+    Everything stops for users who prefer reduced motion.
+  -->
+  <defs>
+    <radialGradient id="cs-body" cx="38%" cy="30%" r="75%">
+      <stop offset="0" stop-color="#6aa8f4"/>
+      <stop offset="0.55" stop-color="#3a78e6"/>
+      <stop offset="1" stop-color="#2356cc"/>
+    </radialGradient>
+    <linearGradient id="cs-limb" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3f7ce8"/>
+      <stop offset="1" stop-color="#2a5fd6"/>
+    </linearGradient>
+    <linearGradient id="cs-shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3b7cf0"/>
+      <stop offset="1" stop-color="#2155cf"/>
+    </linearGradient>
+    <clipPath id="cs-mouth-clip">
+      <path d="M164 236 Q180 240 196 236 Q194 257 180 257 Q166 257 164 236 Z"/>
+    </clipPath>
+  </defs>
+
+  <style>
+    .cs-float, .cs-tilt, .cs-wave, .cs-hand, .cs-eyes, .cs-lids, .cs-flag, .cs-shadow, .cs-arm-rest {
+      transform-box: view-box;
+      animation-timing-function: ease-in-out;
+      animation-iteration-count: infinite;
+    }
+
+    .cs-float  { animation-name: cs-float;  animation-duration: 3s; }
+    .cs-shadow { animation-name: cs-shadow; animation-duration: 3s; transform-origin: 180px 362px; }
+    .cs-tilt   { animation-name: cs-tilt;   animation-duration: 6s; transform-origin: 180px 340px; }
+    .cs-wave   { animation-name: cs-wave;   animation-duration: 6s; transform-origin: 266px 246px; }
+    .cs-hand   { animation-name: cs-hand;   animation-duration: 6s; transform-origin: 306px 182px; }
+    .cs-arm-rest { animation-name: cs-arm-rest; animation-duration: 3s; transform-origin: 96px 246px; }
+    .cs-eyes   { animation-name: cs-blink;  animation-duration: 9s; transform-origin: 180px 186px;
+                 animation-timing-function: linear; }
+    .cs-lids   { animation-name: cs-lids;   animation-duration: 9s; animation-timing-function: linear; opacity: 0; }
+    .cs-flag   { animation-name: cs-flag;   animation-duration: 3s; transform-origin: 184px 54px; }
+
+    @keyframes cs-float {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-6px); }
+    }
+
+    @keyframes cs-shadow {
+      0%, 100% { transform: scaleX(1);    opacity: 0.22; }
+      50%      { transform: scaleX(0.88); opacity: 0.14; }
+    }
+
+    @keyframes cs-tilt {
+      0%, 100% { transform: rotate(0deg); }
+      22%      { transform: rotate(2.2deg); }
+      48%      { transform: rotate(1.2deg); }
+      74%      { transform: rotate(-1.4deg); }
+    }
+
+    /* A short wave (about 2.6s), then the arm rests in its raised hello pose */
+    @keyframes cs-wave {
+      0%, 46%, 100% { transform: rotate(0deg); }
+      8%            { transform: rotate(-14deg); }
+      17%           { transform: rotate(8deg); }
+      26%           { transform: rotate(-12deg); }
+      35%           { transform: rotate(6deg); }
+      42%           { transform: rotate(-3deg); }
+    }
+
+    @keyframes cs-hand {
+      0%, 46%, 100% { transform: rotate(0deg); }
+      8%            { transform: rotate(-8deg); }
+      17%           { transform: rotate(6deg); }
+      26%           { transform: rotate(-7deg); }
+      35%           { transform: rotate(4deg); }
+    }
+
+    @keyframes cs-arm-rest {
+      0%, 100% { transform: rotate(0deg); }
+      50%      { transform: rotate(3deg); }
+    }
+
+    /* One blink around 3s, a quick double blink around 7.5s (each ~0.25s) */
+    @keyframes cs-blink {
+      0%, 30%, 33%, 80%, 82.6%, 85%, 87.6%, 100% { transform: scaleY(1); }
+      31%, 32%                                  { transform: scaleY(0); }
+      81%, 81.6%, 86%, 86.6%                    { transform: scaleY(0); }
+    }
+
+    /* Closed-eye curves appear only while the eyes are shut */
+    @keyframes cs-lids {
+      0%, 30.6%, 32.4%, 80.6%, 82%, 85.6%, 87%, 100% { opacity: 0; }
+      31%, 32%, 81%, 81.6%, 86%, 86.6%               { opacity: 1; }
+    }
+
+    @keyframes cs-flag {
+      0%, 100% { transform: skewY(0deg) scaleX(1); }
+      50%      { transform: skewY(-3deg) scaleX(0.96); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; }
+    }
+  </style>
+
+  <!-- Ground shadow (stays on the ground while the mascot floats) -->
+  <ellipse class="cs-shadow" cx="180" cy="362" rx="74" ry="9" fill="#1e3a8a" opacity="0.22"/>
+
+  <g class="cs-float">
+    <!-- Feet -->
+    <g stroke="#1a4bb8" stroke-width="4" fill="url(#cs-limb)">
+      <ellipse cx="146" cy="342" rx="27" ry="14"/>
+      <ellipse cx="214" cy="342" rx="27" ry="14"/>
+    </g>
+
+    <g class="cs-tilt">
+      <!-- Resting arm (viewer's left) -->
+      <g class="cs-arm-rest">
+        <path d="M100 244 Q80 266 84 296" fill="none" stroke="#1a4bb8" stroke-width="30" stroke-linecap="round"/>
+        <path d="M100 244 Q80 266 84 296" fill="none" stroke="url(#cs-limb)" stroke-width="22" stroke-linecap="round"/>
+      </g>
+
+      <!-- Waving arm (viewer's right) -->
+      <g class="cs-wave">
+        <path d="M262 248 Q292 226 304 192" fill="none" stroke="#1a4bb8" stroke-width="30" stroke-linecap="round"/>
+        <path d="M262 248 Q292 226 304 192" fill="none" stroke="url(#cs-limb)" stroke-width="22" stroke-linecap="round"/>
+        <g class="cs-hand">
+          <!-- Open, friendly mitten hand -->
+          <g stroke="#1a4bb8" stroke-width="4" fill="#3f7ce8">
+            <ellipse cx="290" cy="170" rx="8" ry="11" transform="rotate(-35 290 170)"/>
+            <rect x="294" y="140" width="13" height="30" rx="6.5"/>
+            <rect x="305" y="137" width="13" height="32" rx="6.5"/>
+            <rect x="316" y="142" width="12" height="28" rx="6"/>
+            <ellipse cx="308" cy="174" rx="19" ry="17"/>
+          </g>
+          <!-- Hide the inner outlines where the fingers meet the palm -->
+          <ellipse cx="308" cy="172" rx="16" ry="13" fill="#3f7ce8"/>
+          <path d="M300 160 v-12 M311 158 v-14 M321 160 v-10" stroke="#2a5fd6" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+        </g>
+      </g>
+
+      <!-- Antenna and flag -->
+      <line x1="180" y1="100" x2="180" y2="46" stroke="#1a4bb8" stroke-width="12" stroke-linecap="round"/>
+      <line x1="180" y1="100" x2="180" y2="46" stroke="#2f6be0" stroke-width="7" stroke-linecap="round"/>
+      <g class="cs-flag">
+        <path d="M184 47 L236 52 Q224 64 238 78 L184 76 Z" fill="#2563eb" stroke="#1a4bb8" stroke-width="3" stroke-linejoin="round"/>
+      </g>
+      <circle cx="180" cy="40" r="10" fill="#2f6be0" stroke="#1a4bb8" stroke-width="3"/>
+      <circle cx="177" cy="37" r="3" fill="#ffffff" opacity="0.5"/>
+
+      <!-- Ear knobs -->
+      <g fill="#2f6be0" stroke="#1a4bb8" stroke-width="3">
+        <circle cx="82" cy="204" r="13"/>
+        <circle cx="278" cy="204" r="13"/>
+      </g>
+
+      <!-- Body -->
+      <path d="M180 96 C246 96 276 152 280 216 C285 288 250 334 180 334 C110 334 75 288 80 216 C84 152 114 96 180 96 Z"
+            fill="url(#cs-body)" stroke="#1a4bb8" stroke-width="4"/>
+      <ellipse cx="140" cy="132" rx="30" ry="16" fill="#ffffff" opacity="0.22" transform="rotate(-28 140 132)"/>
+
+      <!-- Face -->
+      <g class="cs-face">
+        <g class="cs-eyes">
+          <ellipse cx="147" cy="186" rx="37" ry="40" fill="#ffffff"/>
+          <ellipse cx="213" cy="186" rx="37" ry="40" fill="#ffffff"/>
+          <circle cx="152" cy="190" r="20" fill="#141a2a"/>
+          <circle cx="208" cy="190" r="20" fill="#141a2a"/>
+          <circle cx="159" cy="181" r="7" fill="#ffffff"/>
+          <circle cx="215" cy="181" r="7" fill="#ffffff"/>
+          <circle cx="146" cy="198" r="3" fill="#ffffff"/>
+          <circle cx="202" cy="198" r="3" fill="#ffffff"/>
+        </g>
+        <g class="cs-lids" fill="none" stroke="#141a2a" stroke-width="5" stroke-linecap="round">
+          <path d="M122 190 Q147 206 172 190"/>
+          <path d="M188 190 Q213 206 238 190"/>
+        </g>
+
+        <!-- Rosy cheeks -->
+        <ellipse cx="118" cy="238" rx="12" ry="7" fill="#f472b6" opacity="0.28"/>
+        <ellipse cx="242" cy="238" rx="12" ry="7" fill="#f472b6" opacity="0.28"/>
+
+        <!-- Happy open smile -->
+        <path d="M164 236 Q180 240 196 236 Q194 257 180 257 Q166 257 164 236 Z" fill="#3b0f1f"/>
+        <g clip-path="url(#cs-mouth-clip)">
+          <ellipse cx="180" cy="256" rx="11" ry="7" fill="#f07c89"/>
+        </g>
+      </g>
+
+      <!-- Shield badge with location pin -->
+      <path d="M180 264 C194 272 208 274 218 272 L218 292 C218 307 201 318 180 324 C159 318 142 307 142 292 L142 272 C152 274 166 272 180 264 Z"
+            fill="url(#cs-shield)" stroke="#f5b82e" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M180 309 C172 299 168 294 168 288 A12 12 0 1 1 192 288 C192 294 188 299 180 309 Z" fill="#ffffff"/>
+      <circle cx="180" cy="288" r="4.5" fill="#2a63dc"/>
+    </g>
+  </g>
+</svg>

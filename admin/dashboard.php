@@ -166,7 +166,7 @@ include __DIR__ . "/partial/head.php";
             <h1><?= csEscape($adminFirstName) ?>!</h1>
             <p class="dash-subtitle">Here is what is happening in your community today, <?= csEscape(date("l, F j, Y")) ?>.</p>
         </div>
-        <img class="dash-mascot" src="../css/images/mascot-wave.png" alt="">
+        <img class="dash-mascot" src="../css/images/mascot-wave-animated.svg" alt="">
     </header>
 
     <!-- CALL TO ACTION -->
