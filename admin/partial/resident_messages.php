@@ -19,6 +19,7 @@
  */
 
 require_once __DIR__ . "/helpers.php";
+require_once __DIR__ . "/replies.php";
 
 if (!function_exists("csResidentThreads")) {
 
@@ -306,8 +307,37 @@ if (!function_exists("csResidentThreads")) {
                     ? "Report " . $row["reportID"] . ($report ? " · " . $report["category"] : "")
                     : "",
                 "isNew" => !$fromBarangay && $row["at"] > $seen,
+                "replyTo" => null,
             ];
         }
+
+        /* "Replying to …" quotes: the parent's sender and a short preview. */
+        $byKey = [];
+        foreach ($messages as $index => $message) {
+            $byKey[$message["key"]] = $index;
+        }
+        $parents = csReplyParents($conn, array_map(
+            static fn($m) => csMessageKeyParts($m["key"]),
+            $messages
+        ));
+        foreach ($messages as &$message) {
+            [$type, $id] = csMessageKeyParts($message["key"]);
+            $parent = $parents[$type . ":" . $id] ?? null;
+            if (!$parent) {
+                continue;
+            }
+            $parentKey = csMessageKey($parent["type"], $parent["id"]);
+            $original = isset($byKey[$parentKey]) ? $messages[$byKey[$parentKey]] : null;
+            $message["replyTo"] = $original
+                ? [
+                    "key" => $parentKey,
+                    "name" => $original["fromBarangay"] ? "Barangay (" . $original["name"] . ")" : $original["name"],
+                    "text" => csReplyPreview($original["message"]),
+                    "missing" => false,
+                ]
+                : ["key" => $parentKey, "name" => "", "text" => "Original message was deleted", "missing" => true];
+        }
+        unset($message);
 
         return [
             "userID" => (string) $profile["userID"],

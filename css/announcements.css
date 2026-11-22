@@ -267,9 +267,88 @@
 }
 
 .ann-comment {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    column-gap: 12px;
+}
+
+/* Replies sit under the comment they belong to, like Facebook */
+.ann-replies {
+    grid-column: 2;
+    list-style: none;
+    margin: 0;
+    padding: 0;
     display: flex;
-    align-items: flex-start;
-    gap: 12px;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ann-replies:not(:empty) {
+    margin-top: 10px;
+}
+
+.ann-comment.is-reply .ann-comment-avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
+}
+
+.ann-reply-to {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    color: var(--cs-primary);
+    font-weight: 600;
+}
+
+.ann-reply-to.is-missing {
+    color: var(--cs-subtle);
+    font-style: italic;
+    font-weight: 500;
+}
+
+.ann-reply-form {
+    grid-column: 2;
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-left: 3px solid var(--cs-primary);
+    border-radius: var(--cs-radius-sm);
+    background: var(--cs-surface, #fff);
+}
+
+.ann-reply-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+    color: var(--cs-muted);
+    font-size: 14px;
+}
+
+.ann-reply-label > i {
+    color: var(--cs-primary);
+}
+
+.ann-reply-label span {
+    flex: 1;
+}
+
+.ann-reply-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.ann-reply-row .cs-textarea {
+    min-height: 44px;
+}
+
+@media (max-width: 640px) {
+    .ann-reply-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
 }
 
 .ann-comment-avatar {
@@ -352,6 +431,9 @@
 }
 
 .ann-comment-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
     margin-top: 6px;
 }
 

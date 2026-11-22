@@ -3,9 +3,12 @@
  * CitiSense — comments under announcements (Announcements page).
  *
  * POST JSON:
- *   { "action": "add",    "announceID": 34, "message": "..." }   barangay posts a comment
+ *   { "action": "add",    "announceID": 34, "message": "...", "parentID": 12 }
+ *                                                               barangay posts a comment, or (parentID)
+ *                                                               a reply to comment 12
  *   { "action": "hide",   "commentID": 12, "hidden": true }      hide / show a resident's comment
  *   { "action": "delete", "commentID": 15 }                      delete one of the barangay's comments
+ *                                                               (and the replies below it)
  *   { "action": "read",   "announceID": 34 }                     mark the comments as seen
  *
  * Replies with the updated comment HTML and the announcement's comment
@@ -51,6 +54,7 @@ try {
     require_once __DIR__ . "/partial/schema.php";
     require_once __DIR__ . "/partial/messages.php";
     require_once __DIR__ . "/partial/announcement_comments.php";
+    require_once __DIR__ . "/partial/replies.php";
 
     if (!csEnsureSchema($conn)) {
         commentsResponse(500, ["success" => false, "message" => "The database update is needed before comments can be used."]);
@@ -82,21 +86,17 @@ try {
     };
 
     /** Summary text and one comment's HTML for the response. */
-    $respond = static function (int $announceID, string $message, ?int $commentID = null) use ($conn, $barangayID): void {
+    $respond = static function (int $announceID, string $message, ?int $commentID = null, array $extra = []) use ($conn, $barangayID): void {
         $data = annLoadComments($conn, $barangayID, [$announceID])[$announceID];
-        $html = "";
-        foreach ($data["comments"] as $comment) {
-            if ($comment["id"] === $commentID) {
-                $html = annCommentHtml($comment);
-            }
-        }
+        $comment = $commentID !== null ? annFindComment($data, $commentID) : null;
         commentsResponse(200, [
             "success" => true,
             "message" => $message,
             "summary" => annCommentSummary($data["total"], $data["residents"]),
             "count" => count($data["comments"]),
-            "html" => $html,
-        ]);
+            "html" => $comment ? annCommentHtml($comment) : "",
+            "rootID" => $comment ? (int) $comment["rootID"] : 0,
+        ] + $extra);
     };
 
     /* -------------------------------------------------------------- add */
@@ -114,6 +114,15 @@ try {
             commentsResponse(400, ["success" => false, "message" => "The comment is too long. Please keep it under 2,000 characters."]);
         }
 
+        $parent = null;
+        $parentID = (int) ($input["parentID"] ?? 0);
+        if ($parentID > 0) {
+            $parent = $ownComment($parentID);
+            if (!$parent || (int) $parent["announceID"] !== $announceID) {
+                commentsResponse(404, ["success" => false, "message" => "The comment you are replying to was not found. It may have been deleted."]);
+            }
+        }
+
         $stmt = $conn->prepare(
             "INSERT INTO announcement_comments (announceID, senderType, senderID, message) VALUES (?, 'barangay', ?, ?)"
         );
@@ -122,10 +131,14 @@ try {
         $commentID = (int) $conn->insert_id;
         $stmt->close();
 
+        if ($parent) {
+            csSaveReplyLink($conn, "announcement_comment", $commentID, "announcement_comment", (int) $parent["commentID"]);
+        }
+
         // Posting counts as having read everything above it.
         csMarkThreadRead($conn, $barangayID, "announcement", (string) $announceID);
 
-        $respond($announceID, "Your comment was posted.", $commentID);
+        $respond($announceID, $parent ? "Your reply was posted." : "Your comment was posted.", $commentID);
     }
 
     /* ------------------------------------------------------------- hide */
@@ -159,12 +172,29 @@ try {
         }
 
         $commentID = (int) $comment["commentID"];
-        $stmt = $conn->prepare("DELETE FROM announcement_comments WHERE commentID = ?");
-        $stmt->bind_param("i", $commentID);
-        $stmt->execute();
-        $stmt->close();
+        $announceID = (int) $comment["announceID"];
 
-        $respond((int) $comment["announceID"], "Your comment was deleted.");
+        // Like Facebook: deleting a comment also removes the replies below it.
+        $entry = annLoadComments($conn, $barangayID, [$announceID])[$announceID];
+        $removed = array_merge([$commentID], annReplyDescendants($entry, $commentID));
+
+        $conn->begin_transaction();
+        $stmt = $conn->prepare("DELETE FROM announcement_comments WHERE commentID = ?");
+        foreach ($removed as $id) {
+            $stmt->bind_param("i", $id);
+            $stmt->execute();
+            csDeleteReplyLink($conn, "announcement_comment", $id);
+        }
+        $stmt->close();
+        $conn->commit();
+
+        $replies = count($removed) - 1;
+        $respond(
+            $announceID,
+            $replies > 0 ? "Your comment and " . $replies . ($replies === 1 ? " reply were" : " replies were") . " deleted." : "Your comment was deleted.",
+            null,
+            ["removed" => $removed]
+        );
     }
 
     /* ------------------------------------------------------------- read */
@@ -180,6 +210,12 @@ try {
 
     commentsResponse(400, ["success" => false, "message" => "Unknown action."]);
 } catch (Throwable $error) {
+    if (isset($conn) && $conn instanceof mysqli) {
+        try {
+            $conn->rollback();
+        } catch (Throwable $ignored) {
+        }
+    }
     error_log("Announcement comments API failed: " . $error->getMessage());
     commentsResponse(500, ["success" => false, "message" => "Something went wrong. Please try again."]);
 }

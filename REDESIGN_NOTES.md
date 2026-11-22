@@ -146,10 +146,21 @@ New page: **Community > Messages**: **one conversation per resident** (changed 2
     message is still saved and only the notification is skipped.
 * "Open Messages" on a report opens that resident's conversation with the report
   already chosen under **About**.
+* **Reply to a specific message** (like Messenger): point at a message and click
+  **Reply**. A "Replying to …" bar appears above the message box (✕ or Esc cancels),
+  and **About** switches to the same report as the original. The sent message shows
+  a quote of the original; clicking the quote jumps to it.
+* **Delete a message**: point at it and click **Delete**. It is removed for everyone
+  (also in the app). Replies that quoted it then say "Original message was deleted".
 * Read state is kept per resident (`message_reads.threadType = 'resident'`,
   `threadID = userID`). The **Messages** menu badge counts residents with new messages.
 * Code: `admin/partial/resident_messages.php`, `admin/messages.php`,
   `admin/messages_api.php`, `js/messages.js`.
+
+**Replies** (Messages and comments) are stored in the new table `message_replies`
+(`itemType`, `itemID` → `parentType`, `parentID`; types `report_message`,
+`resident_message`, `announcement_comment`). Existing tables are not changed, so the
+app keeps working; it shows replies as normal messages until it also reads this table.
 
 **For the mobile app:** to show general messages in the resident's chat with the
 barangay, the app should read (and may write) `resident_messages` rows for the
@@ -160,6 +171,10 @@ each announcement on the **Announcements** page, not in Messages (changed 22 Nov
 
 * Each card has a comments button ("3 comments · 2 from residents", plus a red
   "N new" badge). Clicking it opens the comments under the announcement.
+* **Replies to a specific comment** (like Facebook): every comment has **Reply**.
+  Replies are shown indented under the comment; a reply to a reply goes in the same
+  place and names the person it answers. Deleting a barangay comment also deletes the
+  replies below it (the confirmation says how many).
 * The admin can **write a comment** right there (Ctrl + Enter posts), **hide / show**
   a resident's comment (hidden comments are kept, not deleted), and **delete** the
   barangay's own comments. Everything updates without reloading the page.

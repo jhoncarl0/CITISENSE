@@ -596,7 +596,7 @@ include __DIR__ . "/partial/head.php";
                 $authorName = trim(($announcement["firstName"] ?? "") . " " . ($announcement["lastName"] ?? "")) ?: "Admin";
                 $announceID = (int) $announcement["announceID"];
                 $images = $imagesByAnnouncement[$announceID] ?? [];
-                $comments = $commentStats[$announceID] ?? ["comments" => [], "total" => 0, "residents" => 0, "unread" => 0];
+                $comments = $commentStats[$announceID] ?? ["comments" => [], "threads" => [], "total" => 0, "residents" => 0, "unread" => 0];
                 ?>
                 <article class="cs-card ann-card">
                     <span class="ann-icon"><i class="bi bi-megaphone" aria-hidden="true"></i></span>
@@ -650,7 +650,7 @@ include __DIR__ . "/partial/head.php";
 
                             <div class="ann-comments" id="comments-<?= $announceID ?>" data-announce-id="<?= $announceID ?>" hidden>
                                 <ul class="ann-comment-list" data-comment-list aria-label="Comments on <?= csEscape($announcement["title"]) ?>">
-                                    <?php foreach ($comments["comments"] as $comment): ?>
+                                    <?php foreach ($comments["threads"] ?? [] as $comment): ?>
                                         <?= annCommentHtml($comment) ?>
                                     <?php endforeach; ?>
                                 </ul>

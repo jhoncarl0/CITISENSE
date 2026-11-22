@@ -64,6 +64,22 @@ CREATE TABLE IF NOT EXISTS `resident_messages` (
   KEY `idx_resident_messages_user` (`barangayID`,`userID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Replies to a specific message or comment (like Messenger / Facebook).
+-- itemType / parentType: 'report_message' (report_messages.id),
+-- 'resident_message' (resident_messages.messageID) or
+-- 'announcement_comment' (announcement_comments.commentID).
+-- A row means "item X is a reply to parent Y". Messages and comments without a
+-- row are not replies. The existing tables are not changed.
+CREATE TABLE IF NOT EXISTS `message_replies` (
+  `itemType` varchar(20) NOT NULL,
+  `itemID` int(11) NOT NULL,
+  `parentType` varchar(20) NOT NULL,
+  `parentID` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`itemType`,`itemID`),
+  KEY `idx_message_replies_parent` (`parentType`,`parentID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Admin decisions on possible duplicate reports ('not_duplicate' / 'duplicate').
 CREATE TABLE IF NOT EXISTS `duplicate_reviews` (
   `pairKey` varchar(110) NOT NULL,
