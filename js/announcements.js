@@ -4,6 +4,7 @@
    1. Picture picker (add / preview / remove before saving, drag and drop)
    2. Edit form (fills in text and existing pictures)
    3. Picture viewer (lightbox with previous / next)
+   4. Comments under each announcement (post, hide / show, delete)
    ========================================================================== */
 
 (function () {
@@ -252,4 +253,194 @@
         if (event.key === "ArrowRight") showPicture(position + 1);
         if (event.key === "ArrowLeft") showPicture(position - 1);
     });
+})();
+
+/* ------------------------------------------------------------------ */
+/* 4. Comments under each announcement                                 */
+/* ------------------------------------------------------------------ */
+
+(function () {
+    "use strict";
+
+    const CS = window.CitiSense;
+
+    async function postJSON(body) {
+        const response = await fetch("announcement_comments_api.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify(body)
+        });
+        let data = null;
+        try {
+            data = await response.json();
+        } catch (error) {
+            throw new Error("The server sent an unexpected reply. Please try again.");
+        }
+        if (!response.ok || !data || !data.success) {
+            throw new Error((data && data.message) || "Something went wrong. Please try again.");
+        }
+        return data;
+    }
+
+    function toggleFor(panel) {
+        return document.querySelector('[data-comments-toggle="' + panel.dataset.announceId + '"]');
+    }
+
+    function fromHTML(html) {
+        const template = document.createElement("template");
+        template.innerHTML = html.trim();
+        return template.content.firstElementChild;
+    }
+
+    /** Update the "N comments" text and the empty message after a change. */
+    function refresh(panel, data) {
+        const toggle = toggleFor(panel);
+        if (toggle && typeof data.summary === "string") {
+            toggle.querySelector("[data-comments-summary]").textContent = data.summary;
+        }
+        const empty = panel.querySelector("[data-comments-empty]");
+        if (empty) empty.hidden = panel.querySelectorAll(".ann-comment").length > 0;
+    }
+
+    function markRead(panel) {
+        const toggle = toggleFor(panel);
+        if (!toggle || !toggle.classList.contains("has-unread")) return;
+        toggle.classList.remove("has-unread");
+        const badge = toggle.querySelector("[data-comments-new]");
+        if (badge) badge.remove();
+        postJSON({ action: "read", announceID: Number(panel.dataset.announceId) }).catch(() => {
+            /* Not important enough to bother the user: it is retried next time. */
+        });
+    }
+
+    function setOpen(panel, open, focus) {
+        const toggle = toggleFor(panel);
+        panel.hidden = !open;
+        if (toggle) toggle.setAttribute("aria-expanded", open ? "true" : "false");
+        if (!open) return;
+        markRead(panel);
+        const list = panel.querySelector("[data-comment-list]");
+        if (list && list.scrollHeight > list.clientHeight) list.scrollTop = list.scrollHeight;
+        if (focus) panel.querySelector("textarea").focus({ preventScroll: true });
+    }
+
+    // Open / close
+    document.addEventListener("click", (event) => {
+        if (!(event.target instanceof Element)) return;
+        const toggle = event.target.closest("[data-comments-toggle]");
+        if (!toggle) return;
+        const panel = document.getElementById("comments-" + toggle.dataset.commentsToggle);
+        if (panel) setOpen(panel, panel.hidden, false);
+    });
+
+    // Post a comment
+    document.querySelectorAll("[data-comment-form]").forEach((form) => {
+        const panel = form.closest(".ann-comments");
+        const textarea = form.querySelector("textarea");
+        const button = form.querySelector('button[type="submit"]');
+
+        // Ctrl/Cmd + Enter posts; plain Enter makes a new line.
+        textarea.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+                event.preventDefault();
+                form.requestSubmit();
+            }
+        });
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const message = textarea.value.trim();
+            if (!message) {
+                CS.toast("Please write a comment first.", "error");
+                textarea.focus();
+                return;
+            }
+
+            const original = button.innerHTML;
+            button.disabled = true;
+            button.textContent = "Posting…";
+
+            try {
+                const data = await postJSON({ action: "add", announceID: Number(panel.dataset.announceId), message });
+                const list = panel.querySelector("[data-comment-list]");
+                const item = fromHTML(data.html);
+                if (item) {
+                    list.appendChild(item);
+                    list.scrollTop = list.scrollHeight;
+                }
+                textarea.value = "";
+                refresh(panel, data);
+                CS.toast(data.message, "success");
+            } catch (error) {
+                CS.toast(error.message, "error");
+            } finally {
+                button.disabled = false;
+                button.innerHTML = original;
+            }
+        });
+    });
+
+    // Hide / show a resident's comment, delete the barangay's own comment
+    document.addEventListener("click", async (event) => {
+        if (!(event.target instanceof Element)) return;
+        const hide = event.target.closest("[data-comment-hide]");
+        const remove = event.target.closest("[data-comment-delete]");
+        if (!hide && !remove) return;
+
+        const button = hide || remove;
+        const item = button.closest(".ann-comment");
+        const panel = button.closest(".ann-comments");
+
+        let ok;
+        let body;
+        if (hide) {
+            const hiding = hide.dataset.hidden === "1";
+            ok = await CS.confirm({
+                title: hiding ? "Hide this comment?" : "Show this comment again?",
+                message: hiding
+                    ? "Residents will no longer see this comment under the announcement. You can show it again later."
+                    : "Residents will see this comment under the announcement again.",
+                confirmText: hiding ? "Yes, Hide" : "Yes, Show",
+                danger: hiding,
+                icon: hiding ? "bi-eye-slash" : "bi-eye"
+            });
+            body = { action: "hide", commentID: Number(hide.dataset.commentHide), hidden: hiding };
+        } else {
+            ok = await CS.confirm({
+                title: "Delete your comment?",
+                message: "This comment will be removed for everyone. This cannot be undone.",
+                confirmText: "Yes, Delete",
+                danger: true,
+                icon: "bi-trash"
+            });
+            body = { action: "delete", commentID: Number(remove.dataset.commentDelete) };
+        }
+        if (!ok) return;
+
+        button.disabled = true;
+        try {
+            const data = await postJSON(body);
+            if (remove) {
+                item.remove();
+            } else {
+                const updated = fromHTML(data.html);
+                if (updated) item.replaceWith(updated);
+            }
+            refresh(panel, data);
+            CS.toast(data.message, "success");
+        } catch (error) {
+            button.disabled = false;
+            CS.toast(error.message, "error");
+        }
+    });
+
+    // Links like announcements.php#comments-34 open those comments straight away.
+    const match = /^#comments-(\d+)$/.exec(window.location.hash);
+    if (match) {
+        const panel = document.getElementById("comments-" + match[1]);
+        if (panel) {
+            setOpen(panel, true, false);
+            panel.closest(".ann-card").scrollIntoView({ block: "start", behavior: "smooth" });
+        }
+    }
 })();

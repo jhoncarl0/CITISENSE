@@ -4,7 +4,11 @@
  *
  * Two kinds of conversation ("threads"):
  *   report        messages about one report      (existing table report_messages)
+ *                 -> shown on the Messages page
  *   announcement  comments on one announcement   (new table announcement_comments)
+ *                 -> shown under each announcement on the Announcements page
+ *                    (see partial/announcement_comments.php); used here for
+ *                    the menu badge and unread tracking
  *
  * Both tables use senderType 'resident' | 'barangay'. The mobile app writes
  * the residents' messages; the admin website reads them and writes the
@@ -151,12 +155,15 @@ if (!function_exists("csMessageThreads")) {
         return $threads;
     }
 
-    /** Number of conversations with unread resident messages (for the menu badge). */
-    function csUnreadThreadCount(mysqli $conn, string $barangayID): int
+    /**
+     * Number of conversations with unread resident messages (for the menu badges).
+     * $type "report" = Messages, "announcement" = announcements with new comments.
+     */
+    function csUnreadThreadCount(mysqli $conn, string $barangayID, string $type = "report"): int
     {
         try {
             $count = 0;
-            foreach (csMessageThreads($conn, $barangayID) as $thread) {
+            foreach (csMessageThreads($conn, $barangayID, $type) as $thread) {
                 if ($thread["unread"] > 0) {
                     $count++;
                 }

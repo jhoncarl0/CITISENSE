@@ -14,12 +14,19 @@ require_once __DIR__ . "/partial/messages.php";
 $barangayID = (string) $_SESSION["barangay_id"];
 $schemaReady = csEnsureSchema($conn);
 
-$filter = in_array($_GET["filter"] ?? "", ["report", "announcement"], true) ? $_GET["filter"] : "all";
+/* Announcement comments now live on the Announcements page; keep old links working. */
+if (($_GET["type"] ?? "") === "announcement" || ($_GET["filter"] ?? "") === "announcement") {
+    $announceID = (int) ($_GET["id"] ?? 0);
+    header("Location: announcements.php" . ($announceID > 0 ? "#comments-" . $announceID : ""));
+    exit;
+}
+
+/* Messages shows conversations about reports only. */
 $search = mb_substr(trim((string) ($_GET["search"] ?? "")), 0, 80);
-$type = in_array($_GET["type"] ?? "", ["report", "announcement"], true) ? $_GET["type"] : "";
+$type = ($_GET["type"] ?? "") === "report" ? "report" : "";
 $threadID = mb_substr(trim((string) ($_GET["id"] ?? "")), 0, 50);
 
-$threads = $schemaReady ? csMessageThreads($conn, $barangayID, $filter, $search) : [];
+$threads = $schemaReady ? csMessageThreads($conn, $barangayID, "report", $search) : [];
 $thread = ($schemaReady && $type !== "" && $threadID !== "") ? csLoadThread($conn, $barangayID, $type, $threadID) : null;
 
 if ($thread) {
@@ -33,7 +40,7 @@ if ($thread) {
 }
 
 $unreadTotal = count(array_filter($threads, static fn($t) => $t["unread"] > 0));
-$listQuery = ["filter" => $filter !== "all" ? $filter : "", "search" => $search];
+$listQuery = ["search" => $search];
 
 $pageTitle = "Messages";
 $pageStyles = ["messages.css"];
@@ -48,7 +55,7 @@ include __DIR__ . "/partial/head.php";
     <header class="cs-page-header">
         <div>
             <h1>Messages</h1>
-            <p>Read what residents say about their reports and your announcements, and reply to them.</p>
+            <p>Read what residents say about their reports and reply to them. Comments on announcements are shown on the Announcements page.</p>
         </div>
         <?php if ($unreadTotal > 0): ?>
             <span class="msg-unread-summary"><i class="bi bi-envelope-exclamation" aria-hidden="true"></i> <?= $unreadTotal ?> <?= $unreadTotal === 1 ? "conversation needs" : "conversations need" ?> a look</span>
@@ -63,19 +70,11 @@ include __DIR__ . "/partial/head.php";
 
         <!-- CONVERSATION LIST -->
         <aside class="msg-sidebar" aria-label="Conversations">
-            <nav class="msg-filters" aria-label="Show conversations">
-                <?php foreach (["all" => "All", "report" => "Reports", "announcement" => "Announcements"] as $key => $label): ?>
-                    <a href="<?= csEscape(csUrl("messages.php", ["filter" => $key !== "all" ? $key : "", "search" => $search])) ?>"
-                       class="msg-filter<?= $filter === $key ? " is-active" : "" ?>"<?= $filter === $key ? ' aria-current="page"' : "" ?>><?= $label ?></a>
-                <?php endforeach; ?>
-            </nav>
-
             <form class="msg-search" method="GET" action="messages.php" role="search">
-                <?php if ($filter !== "all"): ?><input type="hidden" name="filter" value="<?= csEscape($filter) ?>"><?php endif; ?>
                 <label class="cs-sr-only" for="msgSearch">Search conversations</label>
                 <div class="cs-input-icon">
                     <i class="bi bi-search" aria-hidden="true"></i>
-                    <input type="search" id="msgSearch" name="search" class="cs-input" placeholder="Search by name, report ID or title" value="<?= csEscape($search) ?>">
+                    <input type="search" id="msgSearch" name="search" class="cs-input" placeholder="Search by name, report ID or category" value="<?= csEscape($search) ?>">
                 </div>
             </form>
 
@@ -87,8 +86,8 @@ include __DIR__ . "/partial/head.php";
                             <a class="msg-thread<?= $active ? " is-active" : "" ?><?= $item["unread"] > 0 ? " is-unread" : "" ?>"
                                href="<?= csEscape(csUrl("messages.php", array_merge($listQuery, ["type" => $item["type"], "id" => $item["id"]]))) ?>"
                                <?= $active ? 'aria-current="true"' : "" ?>>
-                                <span class="msg-thread-icon is-<?= $item["type"] ?>">
-                                    <i class="bi <?= $item["type"] === "report" ? "bi-clipboard-check" : "bi-megaphone" ?>" aria-hidden="true"></i>
+                                <span class="msg-thread-icon is-report">
+                                    <i class="bi bi-clipboard-check" aria-hidden="true"></i>
                                 </span>
                                 <span class="msg-thread-text">
                                     <span class="msg-thread-top">
@@ -111,7 +110,7 @@ include __DIR__ . "/partial/head.php";
                 <div class="cs-empty msg-empty-list">
                     <span class="cs-empty-icon"><i class="bi bi-chat-dots" aria-hidden="true"></i></span>
                     <h3><?= $search !== "" ? "No conversations found" : "No messages yet" ?></h3>
-                    <p><?= $search !== "" ? "Try another name or report ID." : "When residents send a message about a report or comment on an announcement in the CitiSense app, it will appear here." ?></p>
+                    <p><?= $search !== "" ? "Try another name or report ID." : "When residents send a message about a report in the CitiSense app, it will appear here." ?></p>
                 </div>
             <?php endif; ?>
         </aside>
@@ -127,7 +126,7 @@ include __DIR__ . "/partial/head.php";
                         <?php if ($thread["image"] !== ""): ?>
                             <img class="msg-thread-photo" src="<?= csEscape($thread["image"]) ?>" alt="">
                         <?php else: ?>
-                            <span class="msg-thread-icon is-<?= $thread["type"] ?>"><i class="bi <?= $thread["type"] === "report" ? "bi-clipboard-check" : "bi-megaphone" ?>" aria-hidden="true"></i></span>
+                            <span class="msg-thread-icon is-report"><i class="bi bi-clipboard-check" aria-hidden="true"></i></span>
                         <?php endif; ?>
                         <div>
                             <h2><?= csEscape($thread["title"]) ?></h2>
@@ -139,16 +138,12 @@ include __DIR__ . "/partial/head.php";
                     </div>
                     <?php if ($thread["description"] !== ""): ?>
                         <details class="msg-context">
-                            <summary><?= $thread["type"] === "report" ? "What the resident reported" : "Announcement text" ?></summary>
+                            <summary>What the resident reported</summary>
                             <p><?= nl2br(csEscape($thread["description"])) ?></p>
                         </details>
                     <?php endif; ?>
                     <div class="msg-thread-links">
-                        <?php if ($thread["type"] === "report"): ?>
-                            <a href="<?= csEscape(csUrl("reports.php", ["tab" => "all", "search" => $thread["id"]])) ?>"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> Open this report</a>
-                        <?php else: ?>
-                            <a href="<?= csEscape(csUrl("announcements.php", ["search" => $thread["title"]])) ?>"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> Open this announcement</a>
-                        <?php endif; ?>
+                        <a href="<?= csEscape(csUrl("reports.php", ["tab" => "all", "search" => $thread["id"]])) ?>"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> Open this report</a>
                     </div>
                 </header>
 
@@ -156,9 +151,7 @@ include __DIR__ . "/partial/head.php";
                     <?php if (!$thread["messages"]): ?>
                         <div class="msg-no-messages">
                             <i class="bi bi-chat-text" aria-hidden="true"></i>
-                            <p><?= $thread["type"] === "report"
-                                ? "No messages yet. You can send the resident a message about this report below."
-                                : "No comments yet. Replies you write here will be shown under the announcement." ?></p>
+                            <p>No messages yet. You can send the resident a message about this report below.</p>
                         </div>
                     <?php endif; ?>
 
@@ -184,14 +177,6 @@ include __DIR__ . "/partial/head.php";
                                     <time><?= csEscape(csDate($message["at"], "g:i A")) ?></time>
                                 </span>
                                 <p><?= nl2br(csEscape($message["message"])) ?></p>
-                                <?php if ($message["hidden"]): ?>
-                                    <span class="msg-hidden-note"><i class="bi bi-eye-slash" aria-hidden="true"></i> Hidden from residents</span>
-                                <?php endif; ?>
-                                <?php if ($thread["type"] === "announcement" && !$message["fromBarangay"]): ?>
-                                    <button type="button" class="msg-hide-btn" data-hide-comment="<?= $message["id"] ?>" data-hidden="<?= $message["hidden"] ? "0" : "1" ?>">
-                                        <?= $message["hidden"] ? "Show again" : "Hide comment" ?>
-                                    </button>
-                                <?php endif; ?>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -199,7 +184,7 @@ include __DIR__ . "/partial/head.php";
 
                 <form class="msg-reply" id="msgReplyForm" data-type="<?= csEscape($thread["type"]) ?>" data-id="<?= csEscape($thread["id"]) ?>">
                     <label class="cs-label" for="msgReply">
-                        <?= $thread["type"] === "report" ? "Reply to the resident" : "Reply under this announcement" ?>
+                        Reply to the resident
                     </label>
                     <div class="msg-reply-row">
                         <textarea id="msgReply" class="cs-textarea" rows="2" maxlength="2000"
@@ -209,9 +194,7 @@ include __DIR__ . "/partial/head.php";
                         </button>
                     </div>
                     <span class="cs-hint">
-                        <?= $thread["type"] === "report"
-                            ? "The resident will see your reply in the CitiSense app and get a notification."
-                            : "Your reply is shown to everyone who views this announcement in the app." ?>
+                        The resident will see your reply in the CitiSense app and get a notification.
                     </span>
                 </form>
             <?php else: ?>

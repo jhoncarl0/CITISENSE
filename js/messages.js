@@ -1,7 +1,7 @@
 /* ==========================================================================
    CitiSense Admin — Messages
-   Send replies, hide/show announcement comments, keep the view scrolled to
-   the newest message.
+   Send replies to residents about their reports and keep the view scrolled
+   to the newest message.
    ========================================================================== */
 
 (function () {
@@ -67,30 +67,4 @@
             }
         });
     }
-
-    document.addEventListener("click", async (event) => {
-        if (!(event.target instanceof Element)) return;
-        const hide = event.target.closest("[data-hide-comment]");
-        if (!hide) return;
-
-        const hiding = hide.dataset.hidden === "1";
-        const ok = await CS.confirm({
-            title: hiding ? "Hide this comment?" : "Show this comment again?",
-            message: hiding
-                ? "Residents will no longer see this comment under the announcement. You can show it again later."
-                : "Residents will see this comment under the announcement again.",
-            confirmText: hiding ? "Yes, Hide" : "Yes, Show",
-            danger: hiding,
-            icon: hiding ? "bi-eye-slash" : "bi-eye"
-        });
-        if (!ok) return;
-
-        try {
-            const data = await postJSON({ action: "hide", commentID: Number(hide.dataset.hideComment), hidden: hiding });
-            CS.flashAfterReload(data.message, "success");
-            window.location.reload();
-        } catch (error) {
-            CS.toast(error.message, "error");
-        }
-    });
 })();

@@ -6,10 +6,9 @@
  *   { "action": "reply", "type": "report", "id": "REP024", "message": "..." }
  *       Adds a barangay message to report_messages and notifies the resident
  *       (notification table, like status updates).
- *   { "action": "reply", "type": "announcement", "id": "34", "message": "..." }
- *       Adds a barangay reply to announcement_comments.
- *   { "action": "hide", "commentID": 12, "hidden": true }
- *       Hides (or shows again) a resident's comment on an announcement.
+ *
+ * Comments on announcements are handled by announcement_comments_api.php
+ * (they are shown on the Announcements page, not in Messages).
  *
  * Only conversations of the administrator's own barangay are accepted.
  */
@@ -61,7 +60,7 @@ try {
         $id = trim((string) ($input["id"] ?? ""));
         $message = trim((string) ($input["message"] ?? ""));
 
-        if (!in_array($type, ["report", "announcement"], true) || $id === "" || strlen($id) > 50) {
+        if ($type !== "report" || $id === "" || strlen($id) > 50) {
             messagesResponse(400, ["success" => false, "message" => "Invalid conversation."]);
         }
 
@@ -106,58 +105,9 @@ try {
             $stmt->close();
 
             $conn->commit();
-        } else {
-            $announceID = (int) $id;
-            $stmt = $conn->prepare("SELECT announceID FROM announcements WHERE announceID = ? AND barangayID = ? LIMIT 1");
-            $stmt->bind_param("is", $announceID, $barangayID);
-            $stmt->execute();
-            $found = $stmt->get_result()->fetch_assoc();
-            $stmt->close();
-
-            if (!$found) {
-                messagesResponse(404, ["success" => false, "message" => "Announcement not found in your barangay."]);
-            }
-
-            $stmt = $conn->prepare(
-                "INSERT INTO announcement_comments (announceID, senderType, senderID, message) VALUES (?, 'barangay', ?, ?)"
-            );
-            $stmt->bind_param("iss", $announceID, $adminID, $message);
-            $stmt->execute();
-            $stmt->close();
         }
 
         messagesResponse(200, ["success" => true, "message" => "Your reply was sent."]);
-    }
-
-    /* ------------------------------------------------------------- hide */
-    if ($action === "hide") {
-        $commentID = (int) ($input["commentID"] ?? 0);
-        $hidden = !empty($input["hidden"]) ? 1 : 0;
-
-        $stmt = $conn->prepare(
-            "SELECT c.commentID FROM announcement_comments c
-             INNER JOIN announcements a ON a.announceID = c.announceID
-             WHERE c.commentID = ? AND a.barangayID = ? AND c.senderType = 'resident'
-             LIMIT 1"
-        );
-        $stmt->bind_param("is", $commentID, $barangayID);
-        $stmt->execute();
-        $found = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-
-        if (!$found) {
-            messagesResponse(404, ["success" => false, "message" => "Comment not found."]);
-        }
-
-        $stmt = $conn->prepare("UPDATE announcement_comments SET isHidden = ? WHERE commentID = ?");
-        $stmt->bind_param("ii", $hidden, $commentID);
-        $stmt->execute();
-        $stmt->close();
-
-        messagesResponse(200, [
-            "success" => true,
-            "message" => $hidden ? "The comment is now hidden from residents." : "The comment is visible again.",
-        ]);
     }
 
     messagesResponse(400, ["success" => false, "message" => "Unknown action."]);
