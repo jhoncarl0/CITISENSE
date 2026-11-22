@@ -124,6 +124,12 @@
     }
 
     function closeDrawer() {
+        // Opened from a link (?open=ID): forget it, so a refresh shows the list.
+        const url = new URL(window.location.href);
+        if (url.searchParams.has("open")) {
+            url.searchParams.delete("open");
+            history.replaceState(null, "", url.toString());
+        }
         drawer.classList.remove("is-open");
         overlay.classList.remove("is-open");
         document.body.classList.remove("cs-no-scroll");
@@ -303,7 +309,7 @@
                 el("div", { class: "cs-alert-body" },
                     el("strong", { class: "cs-alert-title", text: "This may be a duplicate" }),
                     "It looks like the same problem as report " + report.duplicateOthers.join(", ") + ". ",
-                    el("a", { href: "possible_duplicates.php#group-" + report.duplicateGroup }, "Compare them side by side")
+                    el("a", { href: "possible_duplicates.php?from=" + encodeURIComponent(report.id) + "#group-" + report.duplicateGroup }, "Compare them side by side")
                 ))
             : null;
 
@@ -605,6 +611,17 @@
         const resolve = target.closest("[data-resolve]");
         if (resolve && reports[resolve.dataset.resolve]) return openResolve(reports[resolve.dataset.resolve]);
     });
+
+    /* Links such as reports.php?search=REP001&open=REP001 (from Possible
+       Duplicates, Messages or the Dashboard) open that report straight away. */
+    const openID = new URLSearchParams(window.location.search).get("open");
+    if (openID) {
+        if (reports[openID]) {
+            showDetails(openID, document.querySelector('[data-view="' + CSS.escape(openID) + '"]'));
+        } else {
+            CS.toast("Report " + openID + " could not be found in this list.", "error");
+        }
+    }
 
     /* ----------------------------------------------------- download form */
 

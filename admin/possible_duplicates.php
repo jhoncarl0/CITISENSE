@@ -97,7 +97,7 @@ function dupReportRow(array $report, bool $isMain, string $groupID, string $main
                     <i class="bi bi-x-circle" aria-hidden="true"></i> Not a Duplicate
                 </button>
             <?php endif; ?>
-            <a class="cs-btn cs-btn-ghost cs-btn-sm" href="<?= csEscape(csUrl("reports.php", ["tab" => "all", "search" => $report["reportID"]])) ?>">
+            <a class="cs-btn cs-btn-ghost cs-btn-sm" href="<?= csEscape(csUrl("reports.php", ["tab" => "all", "search" => $report["reportID"], "open" => $report["reportID"]])) ?>">
                 View Report
             </a>
         </div>
@@ -110,6 +110,13 @@ function dupReportRow(array $report, bool $isMain, string $groupID, string $main
 <?php include __DIR__ . "/partial/sidebar.php"; ?>
 
 <main class="cs-main" id="main-content">
+
+    <?php $fromReport = preg_match('/^[A-Za-z0-9_-]{1,50}$/', (string) ($_GET["from"] ?? "")) ? (string) $_GET["from"] : ""; ?>
+    <?php if ($fromReport !== ""): ?>
+        <a class="cs-btn cs-btn-ghost cs-btn-sm dup-back" href="<?= csEscape(csUrl("reports.php", ["tab" => "all", "search" => $fromReport, "open" => $fromReport])) ?>">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to report <?= csEscape($fromReport) ?>
+        </a>
+    <?php endif; ?>
 
     <header class="cs-page-header">
         <div>

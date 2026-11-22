@@ -278,3 +278,8 @@
         padding-left: 20px;
     }
 }
+
+/* "Back to report …" when this page was opened from a report */
+.dup-back {
+    margin-bottom: 12px;
+}

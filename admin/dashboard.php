@@ -232,7 +232,7 @@ include __DIR__ . "/partial/head.php";
                 <ul class="dash-report-list">
                     <?php foreach ($latestReports as $report): ?>
                         <li>
-                            <a href="<?= csEscape(csUrl("reports.php", ["search" => $report["reportID"]])) ?>">
+                            <a href="<?= csEscape(csUrl("reports.php", ["tab" => "all", "search" => $report["reportID"], "open" => $report["reportID"]])) ?>">
                                 <span class="cs-icon-circle"><i class="bi <?= csCategoryIcon($report["categoryName"]) ?>" aria-hidden="true"></i></span>
                                 <span class="dash-report-text">
                                     <strong><?= csEscape($report["categoryName"]) ?></strong>

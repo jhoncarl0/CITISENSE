@@ -219,7 +219,7 @@ include __DIR__ . "/partial/head.php";
                             <ul class="msg-profile-reports">
                                 <?php foreach ($conversation["reports"] as $report): ?>
                                     <li>
-                                        <a href="<?= csEscape(csUrl("reports.php", ["tab" => "all", "search" => $report["id"]])) ?>">
+                                        <a href="<?= csEscape(csUrl("reports.php", ["tab" => "all", "search" => $report["id"], "open" => $report["id"]])) ?>">
                                             <span class="msg-report-icon"><i class="bi <?= csEscape(csCategoryIcon($report["category"])) ?>" aria-hidden="true"></i></span>
                                             <span class="msg-report-text">
                                                 <strong><?= csEscape($report["id"]) ?> · <?= csEscape($report["category"]) ?></strong>
@@ -275,7 +275,7 @@ include __DIR__ . "/partial/head.php";
                                     <time><?= csEscape(csDate($message["at"], "g:i A")) ?></time>
                                 </span>
                                 <?php if ($message["reportLabel"] !== ""): ?>
-                                    <a class="msg-report-tag" href="<?= csEscape(csUrl("reports.php", ["tab" => "all", "search" => $message["reportID"]])) ?>">
+                                    <a class="msg-report-tag" href="<?= csEscape(csUrl("reports.php", ["tab" => "all", "search" => $message["reportID"], "open" => $message["reportID"]])) ?>">
                                         <i class="bi bi-clipboard-check" aria-hidden="true"></i> <?= csEscape($message["reportLabel"]) ?>
                                     </a>
                                 <?php endif; ?>

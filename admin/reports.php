@@ -592,7 +592,7 @@ include __DIR__ . "/partial/head.php";
                                 <p class="rp-line rp-repeat"><i class="bi bi-people" aria-hidden="true"></i><?= $info["cycleSize"] - 1 ?> other <?= $info["cycleSize"] - 1 === 1 ? "resident" : "residents" ?> reported this too</p>
                             <?php endif; ?>
                             <?php if ($info["duplicateGroup"] !== ""): ?>
-                                <a class="rp-dup-tag" href="possible_duplicates.php#group-<?= csEscape($info["duplicateGroup"]) ?>">
+                                <a class="rp-dup-tag" href="possible_duplicates.php?from=<?= csEscape(rawurlencode($id)) ?>#group-<?= csEscape($info["duplicateGroup"]) ?>">
                                     <i class="bi bi-files" aria-hidden="true"></i>
                                     Possible duplicate of <?= csEscape(implode(", ", array_slice($info["duplicateOthers"], 0, 3))) ?><?= count($info["duplicateOthers"]) > 3 ? " +" . (count($info["duplicateOthers"]) - 3) . " more" : "" ?>
                                     <span class="rp-dup-review">Review</span>
