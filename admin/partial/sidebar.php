@@ -190,7 +190,7 @@ $navSections = [
         <div class="cs-account">
             <span class="cs-avatar" aria-hidden="true">
                 <?php if ($navProfilePic !== ""): ?>
-                    <img src="<?= csEscape($navProfilePic) ?>" alt="">
+                    <img src="<?= csEscape(csMediaUrl($navProfilePic)) ?>" alt="">
                 <?php else: ?>
                     <?= csEscape($navInitials) ?>
                 <?php endif; ?>
