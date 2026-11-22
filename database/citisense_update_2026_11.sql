@@ -39,7 +39,8 @@ CREATE TABLE IF NOT EXISTS `announcement_comments` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Which conversations the barangay has already read (for "unread" counts).
--- threadType is 'report' (report_messages) or 'announcement'.
+-- threadType is 'report' (report_messages), 'announcement' or 'resident' (a whole
+-- conversation with one resident on the Messages page; threadID = userID).
 CREATE TABLE IF NOT EXISTS `message_reads` (
   `threadType` varchar(20) NOT NULL,
   `threadID` varchar(50) NOT NULL,
@@ -47,6 +48,21 @@ CREATE TABLE IF NOT EXISTS `message_reads` (
   `lastReadAt` datetime NOT NULL,
   PRIMARY KEY (`threadType`,`threadID`,`barangayID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Direct messages between the barangay and one resident that are not about a
+-- specific report (Messages page, "General message"). Messages about a report
+-- stay in report_messages.
+CREATE TABLE IF NOT EXISTS `resident_messages` (
+  `messageID` int(11) NOT NULL AUTO_INCREMENT,
+  `barangayID` varchar(50) NOT NULL,
+  `userID` varchar(50) NOT NULL,
+  `senderType` enum('resident','barangay') NOT NULL,
+  `senderID` varchar(50) NOT NULL,
+  `message` text NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`messageID`),
+  KEY `idx_resident_messages_user` (`barangayID`,`userID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Admin decisions on possible duplicate reports ('not_duplicate' / 'duplicate').
 CREATE TABLE IF NOT EXISTS `duplicate_reviews` (

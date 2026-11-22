@@ -22,6 +22,7 @@ require_once __DIR__ . "/partial/schema.php";
 require_once __DIR__ . "/partial/uploads.php";
 require_once __DIR__ . "/partial/duplicates.php";
 require_once __DIR__ . "/partial/messages.php";
+require_once __DIR__ . "/partial/resident_messages.php";
 
 $barangayID = (string) $_SESSION["barangay_id"];
 $checks = [];
@@ -80,7 +81,7 @@ dbCheck($checks, "Table collations", function () use ($conn) {
         "SELECT TABLE_NAME, TABLE_COLLATION FROM information_schema.TABLES
          WHERE TABLE_SCHEMA = DATABASE()
            AND TABLE_NAME IN ('reports','users','announcements','report_messages','announcement_comments',
-                              'announcement_images','message_reads','duplicate_reviews','report_image_hashes')
+                              'announcement_images','message_reads','resident_messages','duplicate_reviews','report_image_hashes')
          ORDER BY TABLE_NAME"
     );
     $parts = [];
@@ -91,26 +92,23 @@ dbCheck($checks, "Table collations", function () use ($conn) {
 });
 
 /* --- Feature queries --------------------------------------------------- */
-dbCheck($checks, "Messages: list of conversations", function () use ($conn, $barangayID) {
-    $threads = csMessageThreads($conn, $barangayID, "all");
+dbCheck($checks, "Messages: list of conversations (one per resident)", function () use ($conn, $barangayID) {
+    $threads = csResidentThreads($conn, $barangayID);
     return count($threads) . " conversation(s)";
 });
 
 dbCheck($checks, "Messages: unread count (sidebar badge)", function () use ($conn, $barangayID) {
-    return csUnreadThreadCount($conn, $barangayID) . " unread";
+    return csUnreadResidentCount($conn, $barangayID) . " resident(s) with new messages";
 });
 
-dbCheck($checks, "Messages: open a report conversation", function () use ($conn, $barangayID) {
-    $stmt = $conn->prepare("SELECT reportID FROM reports WHERE barangayID = ? ORDER BY dateReported DESC LIMIT 1");
-    $stmt->bind_param("s", $barangayID);
-    $stmt->execute();
-    $id = (string) ($stmt->get_result()->fetch_assoc()["reportID"] ?? "");
-    $stmt->close();
-    if ($id === "") {
-        return "no reports yet";
+dbCheck($checks, "Messages: open a resident conversation", function () use ($conn, $barangayID) {
+    $threads = csResidentThreads($conn, $barangayID);
+    if (!$threads) {
+        return "no conversations yet";
     }
-    $thread = csLoadThread($conn, $barangayID, "report", $id);
-    return "report $id · " . count($thread["messages"] ?? []) . " message(s)";
+    $conversation = csLoadResidentConversation($conn, $barangayID, $threads[0]["userID"]);
+    return $threads[0]["name"] . " · " . count($conversation["messages"] ?? []) . " message(s), "
+        . count($conversation["reports"] ?? []) . " report(s)";
 });
 
 dbCheck($checks, "Messages: open an announcement conversation", function () use ($conn, $barangayID) {

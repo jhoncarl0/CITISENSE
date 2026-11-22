@@ -70,10 +70,11 @@ if (
     try {
         require_once __DIR__ . "/duplicates.php";
         require_once __DIR__ . "/messages.php";
+        require_once __DIR__ . "/resident_messages.php";
 
         $navBarangay = (string) $_SESSION["barangay_id"];
         $navDuplicateGroups = count(csGroupDuplicatePairs(csFindDuplicatePairs($conn, $navBarangay, false)));
-        $navUnreadMessages = csUnreadThreadCount($conn, $navBarangay, "report");
+        $navUnreadMessages = csUnreadResidentCount($conn, $navBarangay);
         $navUnreadAnnouncements = csUnreadThreadCount($conn, $navBarangay, "announcement");
     } catch (Throwable $navError) {
         error_log("CitiSense sidebar counts: " . $navError->getMessage());
@@ -171,7 +172,7 @@ $navSections = [
                         $countHint = [
                             "reports.php" => [$count . " reports need action (Pending or Overdue)", "need action"],
                             "possible_duplicates.php" => [$count . " groups of possible duplicates to review", "to review"],
-                            "messages.php" => [$count . " report conversations with new messages", "unread"],
+                            "messages.php" => [$count . " residents with new messages", "unread"],
                             "announcements.php" => [$count . " announcements with new comments", "with new comments"],
                         ][$href] ?? [(string) $count, ""];
                         ?>
