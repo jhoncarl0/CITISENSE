@@ -24,6 +24,7 @@ require_once __DIR__ . "/../config/database.php";
 require_once __DIR__ . "/partial/helpers.php";
 require_once __DIR__ . "/partial/schema.php";
 require_once __DIR__ . "/partial/uploads.php";
+require_once __DIR__ . "/partial/announcement_comments.php";
 
 $schemaReady = csEnsureSchema($conn);
 
@@ -465,7 +466,7 @@ $stmt->close();
 
 require_once __DIR__ . "/partial/helpers.php";
 
-/* Pictures and comment counts for the listed announcements. */
+/* Pictures and comments for the listed announcements. */
 $imagesByAnnouncement = [];
 $commentStats = [];
 
@@ -489,34 +490,7 @@ if ($schemaReady && $announcements) {
     }
     $stmt->close();
 
-    $stmt = $conn->prepare(
-        "SELECT c.announceID,
-                SUM(CASE WHEN c.senderType = 'resident' THEN 1 ELSE 0 END) AS residentComments,
-                SUM(CASE WHEN c.senderType = 'resident'
-                          AND c.created_at > COALESCE(mr.lastReadAt, '1970-01-01')
-                          AND c.created_at > COALESCE((SELECT MAX(bc.created_at) FROM announcement_comments bc
-                                                       WHERE bc.announceID = c.announceID AND bc.senderType = 'barangay'), '1970-01-01')
-                         THEN 1 ELSE 0 END) AS unreadComments
-         FROM announcement_comments c
-         LEFT JOIN message_reads mr
-            ON mr.threadType = 'announcement'
-           AND mr.threadID COLLATE utf8mb4_unicode_ci = CAST(c.announceID AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci
-           AND mr.barangayID = ?
-         WHERE c.announceID IN ($marks) AND c.isHidden = 0
-         GROUP BY c.announceID"
-    );
-    $commentTypes = "s" . $idTypes;
-    $commentParams = [$barangayID, ...$ids];
-    $stmt->bind_param($commentTypes, ...$commentParams);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    while ($row = $result->fetch_assoc()) {
-        $commentStats[(int) $row["announceID"]] = [
-            "total" => (int) $row["residentComments"],
-            "unread" => (int) $row["unreadComments"],
-        ];
-    }
-    $stmt->close();
+    $commentStats = annLoadComments($conn, $barangayID, $ids);
 }
 
 $imageError = (string) ($_SESSION["ann_error"] ?? "");
@@ -622,7 +596,7 @@ include __DIR__ . "/partial/head.php";
                 $authorName = trim(($announcement["firstName"] ?? "") . " " . ($announcement["lastName"] ?? "")) ?: "Admin";
                 $announceID = (int) $announcement["announceID"];
                 $images = $imagesByAnnouncement[$announceID] ?? [];
-                $comments = $commentStats[$announceID] ?? ["total" => 0, "unread" => 0];
+                $comments = $commentStats[$announceID] ?? ["comments" => [], "total" => 0, "residents" => 0, "unread" => 0];
                 ?>
                 <article class="cs-card ann-card">
                     <span class="ann-icon"><i class="bi bi-megaphone" aria-hidden="true"></i></span>
@@ -659,17 +633,49 @@ include __DIR__ . "/partial/head.php";
                         <?php endif; ?>
 
                         <?php if ($schemaReady): ?>
-                            <a class="ann-comments-link<?= $comments["unread"] > 0 ? " has-unread" : "" ?>" href="messages.php?type=announcement&amp;id=<?= $announceID ?>">
+                            <button
+                                type="button"
+                                class="ann-comments-toggle<?= $comments["unread"] > 0 ? " has-unread" : "" ?>"
+                                aria-expanded="false"
+                                aria-controls="comments-<?= $announceID ?>"
+                                data-comments-toggle="<?= $announceID ?>"
+                            >
                                 <i class="bi bi-chat-left-text" aria-hidden="true"></i>
-                                <?php if ($comments["total"] > 0): ?>
-                                    <?= $comments["total"] ?> <?= $comments["total"] === 1 ? "comment" : "comments" ?> from residents
-                                    <?php if ($comments["unread"] > 0): ?>
-                                        <span class="cs-badge cs-badge-overdue no-dot"><?= $comments["unread"] ?> new</span>
-                                    <?php endif; ?>
-                                <?php else: ?>
-                                    No comments yet
+                                <span data-comments-summary><?= csEscape(annCommentSummary($comments["total"], $comments["residents"])) ?></span>
+                                <?php if ($comments["unread"] > 0): ?>
+                                    <span class="cs-badge cs-badge-overdue no-dot" data-comments-new><?= $comments["unread"] ?> new</span>
                                 <?php endif; ?>
-                            </a>
+                                <i class="bi bi-chevron-down ann-comments-chevron" aria-hidden="true"></i>
+                            </button>
+
+                            <div class="ann-comments" id="comments-<?= $announceID ?>" data-announce-id="<?= $announceID ?>" hidden>
+                                <ul class="ann-comment-list" data-comment-list aria-label="Comments on <?= csEscape($announcement["title"]) ?>">
+                                    <?php foreach ($comments["comments"] as $comment): ?>
+                                        <?= annCommentHtml($comment) ?>
+                                    <?php endforeach; ?>
+                                </ul>
+                                <p class="ann-comments-empty" data-comments-empty<?= $comments["comments"] ? " hidden" : "" ?>>
+                                    No comments yet. Residents can comment in the CitiSense app, and you can write the first comment below.
+                                </p>
+
+                                <form class="ann-comment-form" data-comment-form>
+                                    <label class="cs-sr-only" for="commentInput<?= $announceID ?>">Write a comment</label>
+                                    <textarea
+                                        id="commentInput<?= $announceID ?>"
+                                        class="cs-textarea"
+                                        rows="2"
+                                        maxlength="2000"
+                                        placeholder="Write a comment… (Ctrl + Enter to post)"
+                                        required
+                                    ></textarea>
+                                    <div class="ann-comment-form-row">
+                                        <span class="cs-hint">Everyone who views this announcement in the app will see your comment.</span>
+                                        <button type="submit" class="cs-btn cs-btn-primary cs-btn-sm">
+                                            <i class="bi bi-send" aria-hidden="true"></i> Post
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
                         <?php endif; ?>
                     </div>
 

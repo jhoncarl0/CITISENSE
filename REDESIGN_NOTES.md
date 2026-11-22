@@ -126,19 +126,31 @@ is only read once.
 
 ## 5. Messages (two-way communication, admin side)
 
-New page: **Community > Messages**.
+New page: **Community > Messages** (conversations about **reports only**).
 
 * **Report conversations** use the existing `report_messages` table. The admin
   can read what residents wrote about a report and reply. A reply sends the resident a
   notification. A conversation can also be started from a report's details panel
   ("Open Messages").
-* **Announcement comments** use the new `announcement_comments` table. The admin can
-  read comments, reply, and hide or unhide inappropriate comments.
-  Hidden comments are kept, not deleted.
-* The sidebar shows how many conversations have new resident messages. A
+* The sidebar shows how many report conversations have new resident messages. A
   conversation counts as read once an admin opens it or replies.
   This is shared by all admins of the same barangay.
-* Each announcement card shows how many comments it has, with a link to them.
+
+**Announcement comments** (table `announcement_comments`) are shown directly under
+each announcement on the **Announcements** page, not in Messages (changed 22 Nov 2026):
+
+* Each card has a comments button ("3 comments · 2 from residents", plus a red
+  "N new" badge). Clicking it opens the comments under the announcement.
+* The admin can **write a comment** right there (Ctrl + Enter posts), **hide / show**
+  a resident's comment (hidden comments are kept, not deleted), and **delete** the
+  barangay's own comments. Everything updates without reloading the page.
+* New resident comments are marked "New". Opening the comments marks them as read.
+  The **Announcements** menu item shows how many announcements have new comments.
+* Old links such as `messages.php?type=announcement&id=34` now open
+  `announcements.php#comments-34`.
+* Code: `admin/partial/announcement_comments.php` (loading and drawing comments),
+  `admin/announcement_comments_api.php` (post / hide / delete / mark as read),
+  section 4 of `js/announcements.js`.
 
 **For the mobile app (not changed here):** to let residents post on announcements
 and see the new pictures, the app should:

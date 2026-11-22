@@ -25,6 +25,7 @@ $navNeedsAction = 0;
 $navProfilePic = "";
 $navDuplicateGroups = 0;
 $navUnreadMessages = 0;
+$navUnreadAnnouncements = 0;
 
 if (
     isset($conn) &&
@@ -72,7 +73,8 @@ if (
 
         $navBarangay = (string) $_SESSION["barangay_id"];
         $navDuplicateGroups = count(csGroupDuplicatePairs(csFindDuplicatePairs($conn, $navBarangay, false)));
-        $navUnreadMessages = csUnreadThreadCount($conn, $navBarangay);
+        $navUnreadMessages = csUnreadThreadCount($conn, $navBarangay, "report");
+        $navUnreadAnnouncements = csUnreadThreadCount($conn, $navBarangay, "announcement");
     } catch (Throwable $navError) {
         error_log("CitiSense sidebar counts: " . $navError->getMessage());
     }
@@ -97,7 +99,7 @@ $navSections = [
         ["analytics.php", "bi-bar-chart-line", "Analytics"],
     ],
     "Community" => [
-        ["announcements.php", "bi-megaphone", "Announcements"],
+        ["announcements.php", "bi-megaphone", "Announcements", $navUnreadAnnouncements],
         ["messages.php", "bi-chat-dots", "Messages", $navUnreadMessages],
         ["users.php", "bi-people", "Residents"],
     ],
@@ -169,7 +171,8 @@ $navSections = [
                         $countHint = [
                             "reports.php" => [$count . " reports need action (Pending or Overdue)", "need action"],
                             "possible_duplicates.php" => [$count . " groups of possible duplicates to review", "to review"],
-                            "messages.php" => [$count . " conversations with new messages", "unread"],
+                            "messages.php" => [$count . " report conversations with new messages", "unread"],
+                            "announcements.php" => [$count . " announcements with new comments", "with new comments"],
                         ][$href] ?? [(string) $count, ""];
                         ?>
                         <span class="cs-nav-count<?= $href === "possible_duplicates.php" ? " is-soft" : "" ?>" title="<?= csEscape($countHint[0]) ?>">
