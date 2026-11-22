@@ -248,9 +248,26 @@ include __DIR__ . "/partial/head.php";
                         <?php if ($day !== $lastDay): $lastDay = $day; ?>
                             <p class="msg-day"><span><?= csEscape($day) ?></span></p>
                         <?php endif; ?>
-                        <div class="msg-bubble-row<?= $message["fromBarangay"] ? " is-mine" : "" ?><?= $message["isNew"] ? " is-new" : "" ?>">
+                        <?php $senderLabel = $message["fromBarangay"] ? "Barangay (" . $message["name"] . ")" : $message["name"]; ?>
+                        <div class="msg-bubble-row<?= $message["fromBarangay"] ? " is-mine" : "" ?><?= $message["isNew"] ? " is-new" : "" ?>"
+                             id="msg-<?= csEscape($message["key"]) ?>"
+                             data-key="<?= csEscape($message["key"]) ?>"
+                             data-report="<?= csEscape($message["reportID"]) ?>"
+                             data-name="<?= csEscape($senderLabel) ?>"
+                             data-preview="<?= csEscape(csReplyPreview($message["message"])) ?>">
                             <?php if (!$message["fromBarangay"]): ?>
                                 <?= msgAvatar($message["name"], $message["avatar"], "msg-avatar") ?>
+                            <?php endif; ?>
+                            <div class="msg-bubble-wrap">
+                            <?php if ($message["replyTo"]): ?>
+                                <?php if ($message["replyTo"]["missing"]): ?>
+                                    <span class="msg-quote is-missing"><i class="bi bi-reply" aria-hidden="true"></i> Original message was deleted</span>
+                                <?php else: ?>
+                                    <a class="msg-quote" href="#msg-<?= csEscape($message["replyTo"]["key"]) ?>" data-jump="<?= csEscape($message["replyTo"]["key"]) ?>">
+                                        <span class="msg-quote-who"><i class="bi bi-reply" aria-hidden="true"></i> Replying to <?= csEscape($message["replyTo"]["name"]) ?></span>
+                                        <span class="msg-quote-text"><?= csEscape($message["replyTo"]["text"]) ?></span>
+                                    </a>
+                                <?php endif; ?>
                             <?php endif; ?>
                             <div class="msg-bubble">
                                 <span class="msg-sender">
@@ -263,6 +280,15 @@ include __DIR__ . "/partial/head.php";
                                     </a>
                                 <?php endif; ?>
                                 <p><?= nl2br(csEscape($message["message"])) ?></p>
+                            </div>
+                            </div>
+                            <div class="msg-actions">
+                                <button type="button" class="msg-action" data-msg-reply title="Reply" aria-label="Reply to this message">
+                                    <i class="bi bi-reply-fill" aria-hidden="true"></i><span>Reply</span>
+                                </button>
+                                <button type="button" class="msg-action is-danger" data-msg-delete title="Delete" aria-label="Delete this message">
+                                    <i class="bi bi-trash" aria-hidden="true"></i><span>Delete</span>
+                                </button>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -283,6 +309,16 @@ include __DIR__ . "/partial/head.php";
                                 <?php endforeach; ?>
                             </select>
                         </label>
+                    </div>
+                    <div class="msg-replying" id="msgReplying" hidden>
+                        <i class="bi bi-reply-fill" aria-hidden="true"></i>
+                        <div>
+                            <strong>Replying to <span data-replying-name></span></strong>
+                            <span data-replying-text></span>
+                        </div>
+                        <button type="button" class="cs-btn cs-btn-ghost cs-btn-sm" data-replying-cancel aria-label="Cancel reply">
+                            <i class="bi bi-x-lg" aria-hidden="true"></i>
+                        </button>
                     </div>
                     <div class="msg-reply-row">
                         <textarea id="msgReply" class="cs-textarea" rows="2" maxlength="2000"

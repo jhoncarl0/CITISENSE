@@ -9,6 +9,11 @@
  *   { "action": "send", "userID": "USR001", "reportID": "", "message": "..." }
  *       General message: added to resident_messages.
  *   Both notify the resident (notification table, like status updates).
+ *   Optional "replyTo": "r12" | "d5" makes it a reply to that message
+ *   (report_messages id 12 / resident_messages id 5), saved in message_replies.
+ *
+ *   { "action": "delete", "userID": "USR001", "key": "r12" }
+ *       Deletes one message of that resident's conversation for everyone.
  *
  *   { "action": "reply", "type": "report", "id": "REP024", "message": "..." }
  *       Older form, still accepted: a message about that report.
@@ -93,6 +98,15 @@ try {
             messagesResponse(404, ["success" => false, "message" => "That report does not belong to this resident."]);
         }
 
+        $replyTo = trim((string) ($input["replyTo"] ?? ""));
+        $replyParts = null;
+        if ($replyTo !== "") {
+            $replyParts = csMessageKeyParts($replyTo);
+            if (!$replyParts || !in_array($replyTo, array_column($resident["messages"], "key"), true)) {
+                messagesResponse(404, ["success" => false, "message" => "The message you are replying to was not found. It may have been deleted."]);
+            }
+        }
+
         $preview = mb_strimwidth($message, 0, 120, "…");
         $notifID = "N" . bin2hex(random_bytes(16));
 
@@ -104,7 +118,12 @@ try {
             );
             $stmt->bind_param("sss", $reportID, $adminID, $message);
             $stmt->execute();
+            $newKey = ["report_message", (int) $conn->insert_id];
             $stmt->close();
+
+            if ($replyParts) {
+                csSaveReplyLink($conn, $newKey[0], $newKey[1], $replyParts[0], $replyParts[1]);
+            }
 
             $notice = "The barangay replied about your report " . $reportID . ": " . $preview;
             $stmt = $conn->prepare(
@@ -121,7 +140,12 @@ try {
             );
             $stmt->bind_param("ssss", $barangayID, $userID, $adminID, $message);
             $stmt->execute();
+            $newKey = ["resident_message", (int) $conn->insert_id];
             $stmt->close();
+
+            if ($replyParts) {
+                csSaveReplyLink($conn, $newKey[0], $newKey[1], $replyParts[0], $replyParts[1]);
+            }
 
             // The notification table may require a report; the message itself is saved either way.
             try {
@@ -140,6 +164,36 @@ try {
         csMarkResidentRead($conn, $barangayID, $userID);
 
         messagesResponse(200, ["success" => true, "message" => "Your message was sent to " . $resident["name"] . "."]);
+    }
+
+    /* ----------------------------------------------------------- delete */
+    if ($action === "delete") {
+        $userID = trim((string) ($input["userID"] ?? ""));
+        $key = trim((string) ($input["key"] ?? ""));
+        $parts = csMessageKeyParts($key);
+
+        $resident = ($userID !== "" && strlen($userID) <= 50) ? csLoadResidentConversation($conn, $barangayID, $userID) : null;
+        if (!$resident || !$parts || !in_array($key, array_column($resident["messages"], "key"), true)) {
+            messagesResponse(404, ["success" => false, "message" => "Message not found. It may already have been deleted."]);
+        }
+
+        [$type, $id] = $parts;
+        if ($type === "report_message") {
+            $stmt = $conn->prepare("DELETE FROM report_messages WHERE id = ?");
+        } else {
+            $stmt = $conn->prepare("DELETE FROM resident_messages WHERE messageID = ? AND barangayID = ?");
+        }
+        if ($type === "report_message") {
+            $stmt->bind_param("i", $id);
+        } else {
+            $stmt->bind_param("is", $id, $barangayID);
+        }
+        $stmt->execute();
+        $stmt->close();
+
+        csDeleteReplyLink($conn, $type, $id);
+
+        messagesResponse(200, ["success" => true, "message" => "The message was deleted."]);
     }
 
     messagesResponse(400, ["success" => false, "message" => "Unknown action."]);

@@ -8,18 +8,24 @@
  * admin/announcement_comments_api.php (add / hide / delete / mark as read),
  * so a comment always looks the same however it got on the page.
  *
+ * Replies (like Facebook): message_replies links a reply to the comment it
+ * answers. Replies are shown one level deep, under their top-level comment;
+ * a reply to a reply also goes there and names the person it answers.
+ *
  * "New" = a visible resident comment newer than both the barangay's last
  * visit to that announcement's comments (message_reads) and the barangay's
  * own latest comment there.
  */
 
 require_once __DIR__ . "/helpers.php";
+require_once __DIR__ . "/replies.php";
 
 if (!function_exists("annLoadComments")) {
 
     /**
      * Comments for the given announcements, oldest first.
-     * Returns [announceID => ["comments" => [...], "total" => int, "residents" => int, "unread" => int]].
+     * Returns [announceID => ["comments" => [...flat...], "threads" => [top-level comments, each with "replies"],
+     *                        "total" => int, "residents" => int, "unread" => int]].
      * total and residents count visible comments only; hidden ones are listed for the admin but not counted.
      */
     function annLoadComments(mysqli $conn, string $barangayID, array $announceIDs): array
@@ -27,7 +33,7 @@ if (!function_exists("annLoadComments")) {
         $ids = array_values(array_unique(array_map("intval", $announceIDs)));
         $data = [];
         foreach ($ids as $id) {
-            $data[$id] = ["comments" => [], "total" => 0, "residents" => 0, "unread" => 0];
+            $data[$id] = ["comments" => [], "threads" => [], "total" => 0, "residents" => 0, "unread" => 0];
         }
         if (!$ids) {
             return $data;
@@ -83,7 +89,97 @@ if (!function_exists("annLoadComments")) {
             }
         }
 
+        /* Replies: which comment each one answers, grouped under its top-level comment. */
+        $all = [];
+        foreach ($data as $entry) {
+            foreach ($entry["comments"] as $comment) {
+                $all[] = ["announcement_comment", $comment["id"]];
+            }
+        }
+        $parents = $all ? csReplyParents($conn, $all) : [];
+
+        foreach ($data as &$entry) {
+            $byID = [];
+            foreach ($entry["comments"] as $index => $comment) {
+                $byID[$comment["id"]] = $index;
+            }
+
+            foreach ($entry["comments"] as &$comment) {
+                $parent = $parents["announcement_comment:" . $comment["id"]] ?? null;
+                $comment["parentID"] = ($parent && isset($byID[$parent["id"]])) ? $parent["id"] : 0;
+                $comment["parentMissing"] = $parent && !isset($byID[$parent["id"]]);
+            }
+            unset($comment);
+
+            foreach ($entry["comments"] as &$comment) {
+                $root = $comment["id"];
+                $guard = 0;
+                while (($up = $entry["comments"][$byID[$root]]["parentID"]) && $guard++ < 100) {
+                    $root = $up;
+                }
+                $comment["rootID"] = $root;
+                $comment["replyToName"] = ($comment["parentID"] && $comment["parentID"] !== $root)
+                    ? $entry["comments"][$byID[$comment["parentID"]]]["name"]
+                    : "";
+            }
+            unset($comment);
+
+            $threads = [];
+            foreach ($entry["comments"] as $comment) {
+                if ($comment["rootID"] === $comment["id"]) {
+                    $threads[$comment["id"]] = $comment + ["replies" => []];
+                }
+            }
+            foreach ($entry["comments"] as $comment) {
+                if ($comment["rootID"] !== $comment["id"]) {
+                    $threads[$comment["rootID"]]["replies"][] = $comment;
+                }
+            }
+            $entry["threads"] = array_values($threads);
+        }
+        unset($entry);
+
         return $data;
+    }
+
+    /** One comment (with its replies when it is a top-level comment), found by ID. */
+    function annFindComment(array $entry, int $commentID): ?array
+    {
+        foreach ($entry["threads"] as $thread) {
+            if ($thread["id"] === $commentID) {
+                return $thread;
+            }
+            foreach ($thread["replies"] as $reply) {
+                if ($reply["id"] === $commentID) {
+                    return $reply;
+                }
+            }
+        }
+        return null;
+    }
+
+    /** IDs of all replies below a comment (replies, their replies, …). */
+    function annReplyDescendants(array $entry, int $commentID): array
+    {
+        $children = [];
+        foreach ($entry["comments"] as $comment) {
+            if (!empty($comment["parentID"])) {
+                $children[$comment["parentID"]][] = $comment["id"];
+            }
+        }
+
+        $found = [];
+        $queue = [$commentID];
+        while ($queue) {
+            $next = array_shift($queue);
+            foreach ($children[$next] ?? [] as $child) {
+                if (!in_array($child, $found, true)) {
+                    $found[] = $child;
+                    $queue[] = $child;
+                }
+            }
+        }
+        return $found;
     }
 
     function annFormatComment(array $row): array
@@ -137,7 +233,12 @@ if (!function_exists("annLoadComments")) {
             $avatar = csEscape(strtoupper(mb_substr($comment["name"], 0, 1)));
         }
 
-        $html = '<li class="' . $classes . '" data-comment-id="' . $comment["id"] . '">';
+        $isTop = array_key_exists("replies", $comment);
+        $classes .= $isTop ? "" : " is-reply";
+
+        $html = '<li class="' . $classes . '" data-comment-id="' . $comment["id"] . '"'
+            . ($isTop ? ' data-root-id="' . $comment["id"] . '"' : '')
+            . (!empty($comment["parentID"]) ? ' data-parent-id="' . (int) $comment["parentID"] . '"' : '') . '>';
         $html .= '<span class="cs-avatar ann-comment-avatar" aria-hidden="true">' . $avatar . '</span>';
         $html .= '<div class="ann-comment-body">';
         $html .= '<div class="ann-comment-head">';
@@ -147,6 +248,11 @@ if (!function_exists("annLoadComments")) {
         }
         if ($comment["isNew"]) {
             $html .= '<span class="ann-comment-tag is-new">New</span>';
+        }
+        if (!empty($comment["replyToName"])) {
+            $html .= '<span class="ann-reply-to"><i class="bi bi-caret-right-fill" aria-hidden="true"></i>' . csEscape($comment["replyToName"]) . '</span>';
+        } elseif (!empty($comment["parentMissing"])) {
+            $html .= '<span class="ann-reply-to is-missing"><i class="bi bi-reply" aria-hidden="true"></i>Reply to a deleted comment</span>';
         }
         $html .= '<time datetime="' . csEscape($comment["at"]) . '" title="' . csEscape(csDate($comment["at"], "F j, Y · g:i A")) . '">'
             . csEscape(csTimeAgo($comment["at"])) . '</time>';
@@ -158,6 +264,9 @@ if (!function_exists("annLoadComments")) {
         }
 
         $html .= '<div class="ann-comment-actions">';
+        $html .= '<button type="button" class="ann-comment-action" data-comment-reply="' . $comment["id"] . '"'
+            . ' data-root="' . (int) ($comment["rootID"] ?? $comment["id"]) . '" data-name="' . csEscape($comment["name"]) . '">'
+            . '<i class="bi bi-reply" aria-hidden="true"></i> Reply</button>';
         if ($comment["fromBarangay"]) {
             $html .= '<button type="button" class="ann-comment-action is-danger" data-comment-delete="' . $comment["id"] . '">'
                 . '<i class="bi bi-trash" aria-hidden="true"></i> Delete</button>';
@@ -169,7 +278,17 @@ if (!function_exists("annLoadComments")) {
         }
         $html .= '</div>';
 
-        $html .= '</div></li>';
+        $html .= '</div>';
+
+        if ($isTop) {
+            $html .= '<ul class="ann-replies" data-replies-for="' . $comment["id"] . '">';
+            foreach ($comment["replies"] as $reply) {
+                $html .= annCommentHtml($reply);
+            }
+            $html .= '</ul>';
+        }
+
+        $html .= '</li>';
 
         return $html;
     }

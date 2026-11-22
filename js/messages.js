@@ -1,8 +1,8 @@
 /* ==========================================================================
    CitiSense Admin — Messages
    One conversation per resident: send a general message or one about a
-   report, show / hide the resident's profile, keep the view scrolled to the
-   newest message.
+   report, reply to a specific message, delete messages, show / hide the
+   resident's profile, keep the view scrolled to the newest message.
    ========================================================================== */
 
 (function () {
@@ -61,6 +61,94 @@
         about.addEventListener("change", updateHint);
         updateHint();
 
+        // Reply to a specific message (like Messenger)
+        const replying = document.getElementById("msgReplying");
+        let replyTo = "";
+
+        function startReply(row) {
+            replyTo = row.dataset.key;
+            replying.querySelector("[data-replying-name]").textContent = row.dataset.name;
+            replying.querySelector("[data-replying-text]").textContent = row.dataset.preview;
+            replying.hidden = false;
+            // A reply about a report goes to that same report.
+            about.value = row.dataset.report || "";
+            updateHint();
+            textarea.focus();
+        }
+
+        function cancelReply() {
+            replyTo = "";
+            replying.hidden = true;
+        }
+
+        replying.querySelector("[data-replying-cancel]").addEventListener("click", () => {
+            cancelReply();
+            textarea.focus();
+        });
+
+        textarea.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && replyTo) cancelReply();
+        });
+
+        document.addEventListener("click", async (event) => {
+            if (!(event.target instanceof Element)) return;
+
+            const replyButton = event.target.closest("[data-msg-reply]");
+            if (replyButton) {
+                startReply(replyButton.closest(".msg-bubble-row"));
+                return;
+            }
+
+            const deleteButton = event.target.closest("[data-msg-delete]");
+            if (deleteButton) {
+                const row = deleteButton.closest(".msg-bubble-row");
+                const mine = row.classList.contains("is-mine");
+                const ok = await CS.confirm({
+                    title: "Delete this message?",
+                    message: mine
+                        ? "Your message will be removed for everyone, also in the resident's CitiSense app. This cannot be undone."
+                        : "This message from " + row.dataset.name + " will be removed for everyone, also in their CitiSense app. This cannot be undone.",
+                    confirmText: "Yes, Delete",
+                    danger: true,
+                    icon: "bi-trash"
+                });
+                if (!ok) return;
+
+                deleteButton.disabled = true;
+                try {
+                    const data = await postJSON({ action: "delete", userID: form.dataset.user, key: row.dataset.key });
+                    const key = row.dataset.key;
+                    if (replyTo === key) cancelReply();
+                    row.remove();
+                    // Replies that quoted it now say the original was deleted.
+                    document.querySelectorAll('[data-jump="' + key + '"]').forEach((quote) => {
+                        const note = document.createElement("span");
+                        note.className = "msg-quote is-missing";
+                        note.innerHTML = '<i class="bi bi-reply" aria-hidden="true"></i> Original message was deleted';
+                        quote.replaceWith(note);
+                    });
+                    CS.toast(data.message, "success");
+                } catch (error) {
+                    deleteButton.disabled = false;
+                    CS.toast(error.message, "error");
+                }
+                return;
+            }
+
+            // Click a quote to jump to the original message.
+            const jump = event.target.closest("[data-jump]");
+            if (jump) {
+                const target = document.getElementById("msg-" + jump.dataset.jump);
+                if (target) {
+                    event.preventDefault();
+                    target.scrollIntoView({ block: "center", behavior: "smooth" });
+                    target.classList.remove("is-highlight");
+                    void target.offsetWidth;
+                    target.classList.add("is-highlight");
+                }
+            }
+        });
+
         // Ctrl/Cmd + Enter sends; plain Enter makes a new line.
         textarea.addEventListener("keydown", (event) => {
             if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
@@ -87,6 +175,7 @@
                     action: "send",
                     userID: form.dataset.user,
                     reportID: about.value,
+                    replyTo,
                     message
                 });
                 CS.flashAfterReload(data.message, "success");

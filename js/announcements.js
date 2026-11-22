@@ -4,7 +4,7 @@
    1. Picture picker (add / preview / remove before saving, drag and drop)
    2. Edit form (fills in text and existing pictures)
    3. Picture viewer (lightbox with previous / next)
-   4. Comments under each announcement (post, hide / show, delete)
+   4. Comments under each announcement (post, reply, hide / show, delete)
    ========================================================================== */
 
 (function () {
@@ -380,6 +380,93 @@
         });
     });
 
+    // Reply to a specific comment (like Facebook): a small form under the top-level comment
+    function replyForm(rootItem) {
+        let form = rootItem.querySelector(":scope > .ann-reply-form");
+        if (form) return form;
+
+        const id = "replyInput" + rootItem.dataset.rootId;
+        form = document.createElement("form");
+        form.className = "ann-reply-form";
+        form.innerHTML =
+            '<div class="ann-reply-label"><i class="bi bi-reply-fill" aria-hidden="true"></i> ' +
+            '<span>Replying to <strong data-reply-name></strong></span>' +
+            '<button type="button" class="ann-comment-action" data-reply-cancel>Cancel</button></div>' +
+            '<label class="cs-sr-only" for="' + id + '">Write a reply</label>' +
+            '<div class="ann-reply-row">' +
+            '<textarea id="' + id + '" class="cs-textarea" rows="1" maxlength="2000" placeholder="Write a reply… (Ctrl + Enter to post)" required></textarea>' +
+            '<button type="submit" class="cs-btn cs-btn-primary cs-btn-sm"><i class="bi bi-send" aria-hidden="true"></i> Reply</button>' +
+            "</div>";
+        rootItem.appendChild(form);
+
+        const textarea = form.querySelector("textarea");
+        const button = form.querySelector('button[type="submit"]');
+        const panel = rootItem.closest(".ann-comments");
+
+        textarea.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+                event.preventDefault();
+                form.requestSubmit();
+            }
+            if (event.key === "Escape") form.remove();
+        });
+        form.querySelector("[data-reply-cancel]").addEventListener("click", () => form.remove());
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const message = textarea.value.trim();
+            if (!message) {
+                CS.toast("Please write a reply first.", "error");
+                textarea.focus();
+                return;
+            }
+
+            const original = button.innerHTML;
+            button.disabled = true;
+            button.textContent = "Posting…";
+            try {
+                const data = await postJSON({
+                    action: "add",
+                    announceID: Number(panel.dataset.announceId),
+                    parentID: Number(form.dataset.parentId),
+                    message
+                });
+                const list = rootItem.querySelector(":scope > .ann-replies");
+                const item = fromHTML(data.html);
+                if (item && list) {
+                    list.appendChild(item);
+                    item.scrollIntoView({ block: "nearest", behavior: "smooth" });
+                }
+                form.remove();
+                refresh(panel, data);
+                CS.toast(data.message, "success");
+            } catch (error) {
+                CS.toast(error.message, "error");
+                button.disabled = false;
+                button.innerHTML = original;
+            }
+        });
+
+        return form;
+    }
+
+    document.addEventListener("click", (event) => {
+        if (!(event.target instanceof Element)) return;
+        const reply = event.target.closest("[data-comment-reply]");
+        if (!reply) return;
+
+        const panel = reply.closest(".ann-comments");
+        const rootItem = panel.querySelector('[data-root-id="' + reply.dataset.root + '"]');
+        if (!rootItem) return;
+
+        const form = replyForm(rootItem);
+        form.dataset.parentId = reply.dataset.commentReply;
+        form.querySelector("[data-reply-name]").textContent = reply.dataset.name;
+        const textarea = form.querySelector("textarea");
+        textarea.focus();
+        form.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+
     // Hide / show a resident's comment, delete the barangay's own comment
     document.addEventListener("click", async (event) => {
         if (!(event.target instanceof Element)) return;
@@ -406,9 +493,24 @@
             });
             body = { action: "hide", commentID: Number(hide.dataset.commentHide), hidden: hiding };
         } else {
+            // Replies below this comment (direct and further down) are removed too.
+            let replyCount = 0;
+            const queue = [item.dataset.commentId];
+            const seen = new Set(queue);
+            while (queue.length) {
+                const parent = queue.shift();
+                panel.querySelectorAll('[data-parent-id="' + parent + '"]').forEach((child) => {
+                    if (seen.has(child.dataset.commentId)) return;
+                    seen.add(child.dataset.commentId);
+                    queue.push(child.dataset.commentId);
+                    replyCount++;
+                });
+            }
             ok = await CS.confirm({
                 title: "Delete your comment?",
-                message: "This comment will be removed for everyone. This cannot be undone.",
+                message: replyCount > 0
+                    ? "This comment and its " + replyCount + (replyCount === 1 ? " reply" : " replies") + " will be removed for everyone. This cannot be undone."
+                    : "This comment will be removed for everyone. This cannot be undone.",
                 confirmText: "Yes, Delete",
                 danger: true,
                 icon: "bi-trash"
@@ -421,7 +523,11 @@
         try {
             const data = await postJSON(body);
             if (remove) {
-                item.remove();
+                (data.removed || []).forEach((id) => {
+                    const gone = panel.querySelector('[data-comment-id="' + id + '"]');
+                    if (gone) gone.remove();
+                });
+                if (item.isConnected) item.remove();
             } else {
                 const updated = fromHTML(data.html);
                 if (updated) item.replaceWith(updated);

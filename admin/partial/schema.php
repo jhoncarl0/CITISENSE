@@ -11,6 +11,8 @@
  *   message_reads           which conversations the barangay has read
  *   resident_messages       direct messages between the barangay and a resident
  *                           that are not about one report (Messages page)
+ *   message_replies         which message / comment a reply answers
+ *                           ("reply to a specific message", like Messenger)
  *   duplicate_reviews       admin decisions on "possible duplicate" pairs
  *   report_image_hashes     cached photo fingerprints for duplicate checks
  *   stats: 'Rejected'       new report status (STAT005, or the next free ID)
@@ -22,7 +24,7 @@
  */
 
 if (!defined("CS_SCHEMA_VERSION")) {
-    define("CS_SCHEMA_VERSION", "2026-11-22");
+    define("CS_SCHEMA_VERSION", "2026-11-22b");
 }
 
 if (!function_exists("csEnsureSchema")) {
@@ -70,6 +72,16 @@ if (!function_exists("csEnsureSchema")) {
                 `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
                 PRIMARY KEY (`messageID`),
                 KEY `idx_resident_messages_user` (`barangayID`, `userID`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+
+            "CREATE TABLE IF NOT EXISTS `message_replies` (
+                `itemType` varchar(20) NOT NULL,
+                `itemID` int(11) NOT NULL,
+                `parentType` varchar(20) NOT NULL,
+                `parentID` int(11) NOT NULL,
+                `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+                PRIMARY KEY (`itemType`, `itemID`),
+                KEY `idx_message_replies_parent` (`parentType`, `parentID`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
 
             "CREATE TABLE IF NOT EXISTS `duplicate_reviews` (

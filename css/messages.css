@@ -576,6 +576,151 @@
     font-size: 14px;
 }
 
+/* Reply to a specific message / delete ------------------------------------ */
+
+.msg-bubble-wrap {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.is-mine .msg-bubble-wrap {
+    align-items: flex-end;
+}
+
+.msg-quote {
+    display: flex;
+    flex-direction: column;
+    max-width: 100%;
+    margin-bottom: -6px;
+    padding: 6px 12px 12px;
+    border-radius: 14px 14px 0 0;
+    background: var(--cs-surface-alt);
+    border: 1px solid var(--cs-border);
+    border-bottom: 0;
+    color: var(--cs-muted);
+    font-size: 13px;
+    text-decoration: none;
+}
+
+a.msg-quote:hover {
+    border-color: var(--cs-primary);
+}
+
+.msg-quote-who {
+    font-weight: 700;
+    color: var(--cs-subtle);
+}
+
+.msg-quote-who i,
+.msg-quote.is-missing i {
+    margin-right: 4px;
+}
+
+.msg-quote-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.msg-quote.is-missing {
+    display: inline-flex;
+    flex-direction: row;
+    font-style: italic;
+}
+
+.msg-actions {
+    display: flex;
+    gap: 2px;
+    align-self: center;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.is-mine .msg-actions {
+    order: -1;
+}
+
+.msg-bubble-row:hover .msg-actions,
+.msg-bubble-row:focus-within .msg-actions {
+    opacity: 1;
+}
+
+.msg-action {
+    display: inline-grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--cs-muted);
+    font-size: 15px;
+    cursor: pointer;
+}
+
+.msg-action span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+}
+
+.msg-action:hover {
+    background: var(--cs-surface-alt);
+    color: var(--cs-primary);
+}
+
+.msg-action.is-danger:hover {
+    color: var(--cs-danger);
+}
+
+.msg-bubble-row.is-highlight .msg-bubble {
+    animation: msg-highlight 1.6s ease-out;
+}
+
+@keyframes msg-highlight {
+    0%, 40% { box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.35); }
+    100%    { box-shadow: var(--cs-shadow-sm); }
+}
+
+.msg-replying {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px 8px 14px;
+    border-left: 3px solid var(--cs-primary);
+    border-radius: var(--cs-radius-sm);
+    background: var(--cs-surface-alt);
+    font-size: 14px;
+}
+
+.msg-replying > i {
+    color: var(--cs-primary);
+}
+
+.msg-replying > div {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.msg-replying [data-replying-text] {
+    overflow: hidden;
+    color: var(--cs-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Touch screens have no hover: keep the buttons visible */
+@media (hover: none) {
+    .msg-actions {
+        opacity: 1;
+    }
+}
+
 @keyframes msg-in {
     from { opacity: 0; transform: translateY(4px); }
     to { opacity: 1; transform: none; }
