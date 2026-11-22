@@ -139,6 +139,9 @@ New page: **Community > Messages**.
   conversation counts as read once an admin opens it or replies.
   This is shared by all admins of the same barangay.
 * Each announcement card shows how many comments it has, with a link to them.
+  The count includes every visible comment, also the barangay's own replies
+  (fixed 22 Nov 2026: it used to count only residents' comments, so a card said
+  "No comments yet" even when the barangay had commented). Hidden comments are not counted.
 
 **For the mobile app (not changed here):** to let residents post on announcements
 and see the new pictures, the app should:

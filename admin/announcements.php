@@ -491,6 +491,7 @@ if ($schemaReady && $announcements) {
 
     $stmt = $conn->prepare(
         "SELECT c.announceID,
+                COUNT(*) AS allComments,
                 SUM(CASE WHEN c.senderType = 'resident' THEN 1 ELSE 0 END) AS residentComments,
                 SUM(CASE WHEN c.senderType = 'resident'
                           AND c.created_at > COALESCE(mr.lastReadAt, '1970-01-01')
@@ -512,7 +513,10 @@ if ($schemaReady && $announcements) {
     $result = $stmt->get_result();
     while ($row = $result->fetch_assoc()) {
         $commentStats[(int) $row["announceID"]] = [
-            "total" => (int) $row["residentComments"],
+            // Every visible comment, including the barangay's own replies,
+            // so a card never says "No comments yet" when comments exist.
+            "total" => (int) $row["allComments"],
+            "residents" => (int) $row["residentComments"],
             "unread" => (int) $row["unreadComments"],
         ];
     }
@@ -622,7 +626,7 @@ include __DIR__ . "/partial/head.php";
                 $authorName = trim(($announcement["firstName"] ?? "") . " " . ($announcement["lastName"] ?? "")) ?: "Admin";
                 $announceID = (int) $announcement["announceID"];
                 $images = $imagesByAnnouncement[$announceID] ?? [];
-                $comments = $commentStats[$announceID] ?? ["total" => 0, "unread" => 0];
+                $comments = $commentStats[$announceID] ?? ["total" => 0, "residents" => 0, "unread" => 0];
                 ?>
                 <article class="cs-card ann-card">
                     <span class="ann-icon"><i class="bi bi-megaphone" aria-hidden="true"></i></span>
@@ -662,7 +666,12 @@ include __DIR__ . "/partial/head.php";
                             <a class="ann-comments-link<?= $comments["unread"] > 0 ? " has-unread" : "" ?>" href="messages.php?type=announcement&amp;id=<?= $announceID ?>">
                                 <i class="bi bi-chat-left-text" aria-hidden="true"></i>
                                 <?php if ($comments["total"] > 0): ?>
-                                    <?= $comments["total"] ?> <?= $comments["total"] === 1 ? "comment" : "comments" ?> from residents
+                                    <?= $comments["total"] ?> <?= $comments["total"] === 1 ? "comment" : "comments" ?>
+                                    <?php if ($comments["residents"] > 0 && $comments["residents"] < $comments["total"]): ?>
+                                        <span class="ann-comments-sub">· <?= $comments["residents"] ?> from residents</span>
+                                    <?php elseif ($comments["residents"] === 0): ?>
+                                        <span class="ann-comments-sub">· from the barangay</span>
+                                    <?php endif; ?>
                                     <?php if ($comments["unread"] > 0): ?>
                                         <span class="cs-badge cs-badge-overdue no-dot"><?= $comments["unread"] ?> new</span>
                                     <?php endif; ?>

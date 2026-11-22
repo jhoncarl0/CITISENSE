@@ -234,6 +234,10 @@
     color: var(--cs-navy);
 }
 
+.ann-comments-sub {
+    font-weight: 500;
+}
+
 /* Picker inside the create / edit forms */
 
 .ann-picker-grid {
