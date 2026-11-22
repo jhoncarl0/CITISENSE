@@ -9,6 +9,8 @@
  *   announcement_comments   residents' comments on announcements and
  *                           barangay replies (same shape as report_messages)
  *   message_reads           which conversations the barangay has read
+ *   resident_messages       direct messages between the barangay and a resident
+ *                           that are not about one report (Messages page)
  *   duplicate_reviews       admin decisions on "possible duplicate" pairs
  *   report_image_hashes     cached photo fingerprints for duplicate checks
  *   stats: 'Rejected'       new report status (STAT005, or the next free ID)
@@ -20,7 +22,7 @@
  */
 
 if (!defined("CS_SCHEMA_VERSION")) {
-    define("CS_SCHEMA_VERSION", "2026-11-21");
+    define("CS_SCHEMA_VERSION", "2026-11-22");
 }
 
 if (!function_exists("csEnsureSchema")) {
@@ -57,6 +59,18 @@ if (!function_exists("csEnsureSchema")) {
                 `lastReadAt` datetime NOT NULL,
                 PRIMARY KEY (`threadType`, `threadID`, `barangayID`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci",
+
+            "CREATE TABLE IF NOT EXISTS `resident_messages` (
+                `messageID` int(11) NOT NULL AUTO_INCREMENT,
+                `barangayID` varchar(50) NOT NULL,
+                `userID` varchar(50) NOT NULL,
+                `senderType` enum('resident','barangay') NOT NULL,
+                `senderID` varchar(50) NOT NULL,
+                `message` text NOT NULL,
+                `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+                PRIMARY KEY (`messageID`),
+                KEY `idx_resident_messages_user` (`barangayID`, `userID`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
 
             "CREATE TABLE IF NOT EXISTS `duplicate_reviews` (
                 `pairKey` varchar(110) NOT NULL,

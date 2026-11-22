@@ -324,6 +324,7 @@ include __DIR__ . "/partial/head.php";
                             <th scope="col">Email</th>
                             <th scope="col">Contact number</th>
                             <th scope="col">Date joined</th>
+                            <th scope="col"><span class="cs-sr-only">Actions</span></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -365,6 +366,12 @@ include __DIR__ . "/partial/head.php";
                                 </td>
                                 <td data-label="Date joined">
                                     <?= csEscape(csDate($user["dateJoined"], "M j, Y", "—")) ?>
+                                </td>
+                                <td data-label="" class="users-actions">
+                                    <a href="<?= csEscape(csUrl("messages.php", ["user" => $user["userID"]])) ?>" class="cs-btn cs-btn-secondary cs-btn-sm"
+                                       aria-label="Message <?= csEscape($fullName) ?>">
+                                        <i class="bi bi-chat-dots" aria-hidden="true"></i> Message
+                                    </a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

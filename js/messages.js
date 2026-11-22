@@ -1,7 +1,8 @@
 /* ==========================================================================
    CitiSense Admin — Messages
-   Send replies to residents about their reports and keep the view scrolled
-   to the newest message.
+   One conversation per resident: send a general message or one about a
+   report, show / hide the resident's profile, keep the view scrolled to the
+   newest message.
    ========================================================================== */
 
 (function () {
@@ -12,6 +13,23 @@
     const form = document.getElementById("msgReplyForm");
 
     if (list) list.scrollTop = list.scrollHeight;
+
+    // Profile panel
+    const profileToggle = document.querySelector("[data-profile-toggle]");
+    const profile = document.getElementById("msgProfile");
+    function setProfile(open) {
+        profile.hidden = !open;
+        profileToggle.setAttribute("aria-expanded", open ? "true" : "false");
+        if (open) profile.querySelector("[data-profile-close]").focus();
+        else profileToggle.focus();
+    }
+    if (profileToggle && profile) {
+        profileToggle.addEventListener("click", () => setProfile(profile.hidden));
+        profile.querySelector("[data-profile-close]").addEventListener("click", () => setProfile(false));
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && !profile.hidden) setProfile(false);
+        });
+    }
 
     async function postJSON(body) {
         const response = await fetch("messages_api.php", {
@@ -34,6 +52,14 @@
     if (form) {
         const textarea = document.getElementById("msgReply");
         const button = document.getElementById("msgSend");
+        const about = document.getElementById("msgAbout");
+        const hint = document.getElementById("msgAboutHint");
+
+        function updateHint() {
+            hint.textContent = about.value ? hint.dataset.report : hint.dataset.general;
+        }
+        about.addEventListener("change", updateHint);
+        updateHint();
 
         // Ctrl/Cmd + Enter sends; plain Enter makes a new line.
         textarea.addEventListener("keydown", (event) => {
@@ -57,9 +83,18 @@
             button.textContent = "Sending…";
 
             try {
-                const data = await postJSON({ action: "reply", type: form.dataset.type, id: form.dataset.id, message });
+                const data = await postJSON({
+                    action: "send",
+                    userID: form.dataset.user,
+                    reportID: about.value,
+                    message
+                });
                 CS.flashAfterReload(data.message, "success");
-                window.location.reload();
+                // Keep the chosen report selected after the reload.
+                const url = new URL(window.location.href);
+                if (about.value) url.searchParams.set("report", about.value);
+                else url.searchParams.delete("report");
+                window.location.replace(url.toString());
             } catch (error) {
                 CS.toast(error.message, "error");
                 button.disabled = false;

@@ -126,15 +126,34 @@ is only read once.
 
 ## 5. Messages (two-way communication, admin side)
 
-New page: **Community > Messages** (conversations about **reports only**).
+New page: **Community > Messages**: **one conversation per resident** (changed 22 Nov 2026).
 
-* **Report conversations** use the existing `report_messages` table. The admin
-  can read what residents wrote about a report and reply. A reply sends the resident a
-  notification. A conversation can also be started from a report's details panel
-  ("Open Messages").
-* The sidebar shows how many report conversations have new resident messages. A
-  conversation counts as read once an admin opens it or replies.
-  This is shared by all admins of the same barangay.
+* The list shows one entry per resident (photo, name, last message, which report it
+  was about, and a red count of new messages), newest first. Search finds residents by
+  name, email or report ID; searching a name also lists residents you have not talked to
+  yet ("Start a new conversation"). The **Residents** page has a **Message** button too.
+* A conversation combines every message about all of that resident's reports, oldest
+  first. Each message about a report shows a small tag (e.g. "Report REP002 ·
+  Streetlight") that opens the report.
+* **Profile** (button in the conversation header) slides in the resident's email,
+  contact number, member-since date and all their reports with status.
+* When writing, **About** chooses where the message goes:
+  * a report: saved in `report_messages` (the chat under that report in the app),
+    as before, and the resident gets a notification;
+  * **General message**: saved in the new table `resident_messages` (`barangayID`,
+    `userID`, `senderType`, `senderID`, `message`), with a notification
+    (`reportID` empty). If your `notification` table requires a report, the
+    message is still saved and only the notification is skipped.
+* "Open Messages" on a report opens that resident's conversation with the report
+  already chosen under **About**.
+* Read state is kept per resident (`message_reads.threadType = 'resident'`,
+  `threadID = userID`). The **Messages** menu badge counts residents with new messages.
+* Code: `admin/partial/resident_messages.php`, `admin/messages.php`,
+  `admin/messages_api.php`, `js/messages.js`.
+
+**For the mobile app:** to show general messages in the resident's chat with the
+barangay, the app should read (and may write) `resident_messages` rows for the
+resident's `userID`, together with their `report_messages`.
 
 **Announcement comments** (table `announcement_comments`) are shown directly under
 each announcement on the **Announcements** page, not in Messages (changed 22 Nov 2026):
