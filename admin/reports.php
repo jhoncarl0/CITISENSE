@@ -325,7 +325,7 @@ if ($detailReports) {
     $stmt = reportsPrepare(
         $conn,
         "SELECT h.reportID, h.remarks, h.dateChanged, s.statusName, u.firstName, u.lastName
-         FROM reportHistory h
+         FROM reporthistory h
          INNER JOIN reports r ON r.reportID = h.reportID
          INNER JOIN stats s ON s.statusID = h.statusID
          LEFT JOIN users u ON u.userID = h.userID

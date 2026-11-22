@@ -73,7 +73,7 @@ function statusLoadCycles(
 
     $historyStmt = $conn->prepare(
         "SELECT MIN(dateChanged) AS resolvedAt
-         FROM reportHistory
+         FROM reporthistory
          WHERE reportID = ?
            AND statusID = 'STAT003'"
     );
@@ -174,7 +174,7 @@ function statusRecordChange(
     $dateChanged = date("Y-m-d H:i:s");
 
     $stmt = $conn->prepare(
-        "INSERT INTO reportHistory
+        "INSERT INTO reporthistory
             (historyID, reportID, userID, statusID, remarks, dateChanged)
          VALUES (?, ?, ?, ?, ?, ?)"
     );

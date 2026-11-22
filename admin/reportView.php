@@ -158,7 +158,7 @@ $allReports = array_values(array_filter(
 /* =========================================================
    FETCH ACTUAL RESOLUTION DATES
 
-   Resolution dates are taken from reportHistory.
+   Resolution dates are taken from reporthistory.
 
    No fabricated resolution timestamps.
 ========================================================= */
@@ -170,7 +170,7 @@ $sql = "
         h.reportID,
         MIN(h.dateChanged) AS resolvedAt
 
-    FROM reportHistory h
+    FROM reporthistory h
 
     INNER JOIN reports r
         ON r.reportID = h.reportID
@@ -369,7 +369,7 @@ $sql = "
         u.firstName,
         u.lastName
 
-    FROM reportHistory h
+    FROM reporthistory h
 
     INNER JOIN reports r
         ON r.reportID = h.reportID
@@ -1195,10 +1195,10 @@ function rvRenderCard(
          REPORT STATUS HISTORY DATA
 
          Current status comes from reports.statusID.
-         Previous status changes come from reportHistory.
+         Previous status changes come from reporthistory.
     ====================================================== -->
 
-    <div id="reportHistoryTemplates" hidden>
+    <div id="reporthistoryTemplates" hidden>
 
         <?php foreach ($allReports as $historyReport): ?>
 

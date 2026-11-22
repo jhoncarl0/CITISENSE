@@ -73,7 +73,7 @@ function timelineLoadCycles(
      */
     $resolutionStmt = $conn->prepare(
         "SELECT MAX(dateChanged) AS resolvedAt
-         FROM reportHistory
+         FROM reporthistory
          WHERE reportID = ?
            AND statusID = 'STAT003'"
     );
@@ -133,7 +133,7 @@ function timelineFindOriginalCycle(array $cycles, string $reportID): ?array
 |--------------------------------------------------------------------------
 | RECORD STATUS CHANGE
 |--------------------------------------------------------------------------
-| reportHistory stores every actual status transition.
+| reporthistory stores every actual status transition.
 | dateChanged uses its database default.
 |--------------------------------------------------------------------------
 */
@@ -148,7 +148,7 @@ function timelineRecordStatusChange(
     $historyID = "H" . bin2hex(random_bytes(16));
 
     $stmt = $conn->prepare(
-        "INSERT INTO reportHistory
+        "INSERT INTO reporthistory
             (historyID, reportID, userID, statusID, remarks)
          VALUES (?, ?, ?, ?, NULL)"
     );

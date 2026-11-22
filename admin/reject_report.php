@@ -7,7 +7,7 @@
  * Rules:
  *   - Only an administrator of the report's barangay may reject it.
  *   - Only Pending reports can be rejected, one report at a time.
- *   - A reason is required. It is saved in reportHistory.remarks and sent
+ *   - A reason is required. It is saved in reporthistory.remarks and sent
  *     to the resident in a notification.
  *   - Rejected reports are left out of the Original/Duplicate cycles, so if
  *     the first report of an issue is rejected, the next report of that
@@ -122,7 +122,7 @@ try {
     $dateChanged = date("Y-m-d H:i:s");
 
     $stmt = $conn->prepare(
-        "INSERT INTO reportHistory (historyID, reportID, userID, statusID, remarks, dateChanged)
+        "INSERT INTO reporthistory (historyID, reportID, userID, statusID, remarks, dateChanged)
          VALUES (?, ?, ?, ?, ?, ?)"
     );
     $stmt->bind_param("ssssss", $historyID, $reportID, $adminID, $rejectedID, $reason, $dateChanged);

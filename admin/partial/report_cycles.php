@@ -50,7 +50,7 @@ if (!function_exists("csClassifyReportCycles")) {
 
         $stmt = $conn->prepare(
             "SELECT h.reportID, MIN(h.dateChanged) AS resolvedAt
-             FROM reportHistory h
+             FROM reporthistory h
              INNER JOIN reports r ON r.reportID = h.reportID
              WHERE r.barangayID = ?
                AND h.statusID = 'STAT003'

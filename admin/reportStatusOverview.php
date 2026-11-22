@@ -193,7 +193,7 @@ foreach ($allMatchingReports as $report) {
     ];
 }
 
-// Retrieve real reportHistory records, scoped to the admin's barangay.
+// Retrieve real reporthistory records, scoped to the admin's barangay.
 // Only copy histories belonging to a report in this board.
 if ($details) {
     $historySQL = '
@@ -205,7 +205,7 @@ if ($details) {
             s.statusName,
             u.firstName,
             u.lastName
-        FROM reportHistory h
+        FROM reporthistory h
         INNER JOIN reports r ON r.reportID = h.reportID
         INNER JOIN stats s ON s.statusID = h.statusID
         LEFT JOIN users u ON u.userID = h.userID

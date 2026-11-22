@@ -65,7 +65,7 @@ function overdueLoadCycles(
 
     $historyStmt = $conn->prepare(
         "SELECT MIN(dateChanged) AS resolvedAt
-         FROM reportHistory
+         FROM reporthistory
          WHERE reportID = ?
            AND statusID = 'STAT003'"
     );
@@ -125,7 +125,7 @@ function overdueRecordChange(
     $historyID = "H" . bin2hex(random_bytes(16));
 
     $historyStmt = $conn->prepare(
-        "INSERT INTO reportHistory
+        "INSERT INTO reporthistory
             (historyID, reportID, userID, statusID, remarks)
          VALUES (?, ?, ?, 'STAT004', ?)"
     );
