@@ -184,7 +184,7 @@ if (!function_exists("csMessageThreads")) {
             $stmt = $conn->prepare(
                 "SELECT r.reportID, r.userID, r.description, r.dateReported, c.categoryName, s.statusName, l.address,
                         u.firstName, u.lastName,
-                        (SELECT ri.imagePath FROM reportImages ri WHERE ri.reportID = r.reportID ORDER BY ri.uploadedAt ASC LIMIT 1) AS imagePath
+                        (SELECT ri.imagePath FROM reportimages ri WHERE ri.reportID = r.reportID ORDER BY ri.uploadedAt ASC LIMIT 1) AS imagePath
                  FROM reports r
                  INNER JOIN categories c ON c.categoryID = r.categoryID
                  INNER JOIN stats s ON s.statusID = r.statusID

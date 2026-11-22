@@ -218,7 +218,7 @@ if (!function_exists("csFindDuplicatePairs")) {
             "SELECT r.reportID, r.categoryID, r.statusID, r.locationID, r.title, r.description, r.dateReported,
                     c.categoryName, s.statusName, l.address, l.latitude, l.longitude,
                     u.firstName, u.lastName,
-                    (SELECT ri.imagePath FROM reportImages ri WHERE ri.reportID = r.reportID
+                    (SELECT ri.imagePath FROM reportimages ri WHERE ri.reportID = r.reportID
                      ORDER BY ri.uploadedAt ASC LIMIT 1) AS imagePath
              FROM reports r
              INNER JOIN categories c ON c.categoryID = r.categoryID

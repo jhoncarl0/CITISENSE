@@ -310,7 +310,7 @@ if ($detailReports) {
 
     $stmt = reportsPrepare(
         $conn,
-        "SELECT reportID, imagePath FROM reportImages WHERE reportID IN ($marks) ORDER BY uploadedAt ASC"
+        "SELECT reportID, imagePath FROM reportimages WHERE reportID IN ($marks) ORDER BY uploadedAt ASC"
     );
     $stmt->bind_param($idTypes, ...$ids);
     $stmt->execute();

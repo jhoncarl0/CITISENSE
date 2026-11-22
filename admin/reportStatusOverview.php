@@ -133,7 +133,7 @@ $sql = '
         u.contactNo,
         (
             SELECT ri.imagePath
-            FROM reportImages ri
+            FROM reportimages ri
             WHERE ri.reportID = r.reportID
             ORDER BY ri.uploadedAt ASC
             LIMIT 1
