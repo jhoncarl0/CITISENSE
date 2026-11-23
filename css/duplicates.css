@@ -283,3 +283,34 @@
 .dup-back {
     margin-bottom: 12px;
 }
+
+/* Phones: photo beside the title only; details and buttons use the full width. */
+@media (max-width: 640px) {
+    .dup-report {
+        display: grid;
+        grid-template-columns: 64px minmax(0, 1fr);
+        align-items: center;
+        gap: 12px;
+    }
+
+    .dup-info {
+        display: contents;
+    }
+
+    .dup-photo {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .dup-title-row {
+        grid-column: 2;
+        grid-row: 1;
+        margin: 0;
+    }
+
+    .dup-info > :not(.dup-title-row),
+    .dup-actions {
+        grid-column: 1 / -1;
+        margin-top: 0;
+    }
+}

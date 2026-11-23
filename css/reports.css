@@ -755,3 +755,70 @@
 .rp-message-box h4 {
     margin-bottom: 2px;
 }
+
+/* Phones: the photo sits beside the title only; details and buttons use the
+   full width, so every left edge lines up. */
+@media (max-width: 640px) {
+    .rp-item {
+        display: grid;
+        grid-template-columns: 56px minmax(0, 1fr);
+        align-items: center;
+        gap: 12px;
+    }
+
+    .rp-main {
+        display: contents;
+    }
+
+    .rp-thumb {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .rp-title-row {
+        grid-column: 2;
+        grid-row: 1;
+        margin: 0;
+    }
+
+    .rp-main > :not(.rp-title-row),
+    .rp-actions {
+        grid-column: 1 / -1;
+        margin-top: 0;
+    }
+
+    .rp-dup-tag {
+        justify-self: start;
+    }
+}
+
+@media (max-width: 640px) {
+    /* The duplicate note wraps as normal text (icon stays at the start). */
+    .rp-dup-tag {
+        display: block;
+        padding: 8px 12px;
+        border-radius: 14px;
+        line-height: 1.45;
+    }
+
+    .rp-dup-tag > i {
+        margin-right: 4px;
+    }
+
+    .rp-dup-review {
+        display: inline-block;
+        margin-left: 4px;
+    }
+}
+
+@media (max-width: 380px) {
+    /* Accept / Reject / View fit on small phones */
+    .rp-actions {
+        gap: 6px;
+    }
+
+    .rp-actions .cs-btn {
+        padding: 0 6px;
+        gap: 4px;
+    }
+}

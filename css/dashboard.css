@@ -326,3 +326,44 @@
         margin-left: 62px;
     }
 }
+
+/* Phones: name and mascot side by side, the long sentence below uses the full width. */
+@media (max-width: 640px) {
+    .dash-welcome {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0 12px;
+    }
+
+    .dash-welcome-text {
+        display: contents;
+    }
+
+    .dash-welcome .cs-location-chip {
+        grid-column: 1 / -1;
+        justify-self: start;
+    }
+
+    /* Greeting and name stay together, centred beside the mascot. */
+    .dash-greeting {
+        grid-column: 1;
+        align-self: end;
+    }
+
+    .dash-welcome h1 {
+        grid-column: 1;
+        align-self: start;
+    }
+
+    .dash-mascot {
+        grid-column: 2;
+        grid-row: 2 / span 2;
+        align-self: center;
+        width: 110px;
+    }
+
+    .dash-subtitle {
+        grid-column: 1 / -1;
+        margin-top: 12px;
+    }
+}

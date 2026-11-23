@@ -668,3 +668,51 @@
         grid-template-columns: repeat(2, 1fr);
     }
 }
+
+/* Phones: icon beside the title only; text, pictures, comments and buttons
+   use the full card width. Edit and Delete get the same width. */
+@media (max-width: 640px) {
+    .ann-card {
+        display: grid;
+        grid-template-columns: 46px minmax(0, 1fr);
+        align-items: center;
+        gap: 12px;
+    }
+
+    .ann-content {
+        display: contents;
+    }
+
+    .ann-icon {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .ann-content h2 {
+        grid-column: 2;
+        grid-row: 1;
+        font-size: 18px;
+        overflow-wrap: anywhere;
+    }
+
+    .ann-content > :not(h2),
+    .ann-actions {
+        grid-column: 1 / -1;
+        margin-top: 0;
+    }
+
+    .ann-comments-toggle {
+        justify-self: start;
+    }
+
+    /* Two equal halves: Edit | Delete */
+    .ann-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .ann-actions .cs-btn {
+        width: 100%;
+        min-width: 0;
+    }
+}

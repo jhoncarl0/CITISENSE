@@ -186,8 +186,8 @@ include __DIR__ . "/partial/head.php";
                                 <?php endif; ?>
                             </p>
                         </div>
-                        <button type="button" class="cs-btn cs-btn-ghost cs-btn-sm" aria-expanded="false" aria-controls="msgProfile" data-profile-toggle>
-                            <i class="bi bi-person-vcard" aria-hidden="true"></i> Profile
+                        <button type="button" class="cs-btn cs-btn-ghost cs-btn-sm msg-profile-btn" aria-expanded="false" aria-controls="msgProfile" aria-label="Profile" data-profile-toggle>
+                            <i class="bi bi-person-vcard" aria-hidden="true"></i> <span class="msg-profile-label">Profile</span>
                         </button>
                     </div>
 
