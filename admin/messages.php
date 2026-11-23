@@ -48,9 +48,16 @@ if ($conversation) {
     unset($item);
 
     /* Which report a new message is about: the one asked for, else general. */
+    /* Default: the report of the latest message, else the newest report, so the
+       message reaches the resident's chat in the CitiSense app. "general" = the
+       admin chose a general message. */
     $reportIDs = array_column($conversation["reports"], "id");
-    if (!in_array($preselectReport, $reportIDs, true)) {
+    if ($preselectReport === "general") {
         $preselectReport = "";
+    } elseif (!in_array($preselectReport, $reportIDs, true)) {
+        $preselectReport = in_array($conversation["lastReport"], $reportIDs, true)
+            ? $conversation["lastReport"]
+            : (string) ($reportIDs[0] ?? "");
     }
 }
 
@@ -301,7 +308,7 @@ include __DIR__ . "/partial/head.php";
                         <label class="msg-about">
                             <span>About</span>
                             <select id="msgAbout" class="cs-select">
-                                <option value=""<?= $preselectReport === "" ? " selected" : "" ?>>General message (not about a report)</option>
+                                <option value=""<?= $preselectReport === "" ? " selected" : "" ?>>General message (not shown in the app's chat yet)</option>
                                 <?php foreach ($conversation["reports"] as $report): ?>
                                     <option value="<?= csEscape($report["id"]) ?>"<?= $preselectReport === $report["id"] ? " selected" : "" ?>>
                                         Report <?= csEscape($report["id"]) ?> · <?= csEscape($report["category"]) ?> (<?= csEscape($report["status"]) ?>)
@@ -328,7 +335,7 @@ include __DIR__ . "/partial/head.php";
                         </button>
                     </div>
                     <span class="cs-hint" id="msgAboutHint"
-                          data-general="The resident gets a notification and sees this message in their chat with the barangay."
+                          data-general="The resident only gets this as a notification: the CitiSense app does not show general messages in a chat yet, so they cannot reply to it. Choose a report to start a conversation they can answer."
                           data-report="The resident gets a notification and sees this message under that report in the CitiSense app."></span>
                 </form>
             <?php else: ?>

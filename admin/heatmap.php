@@ -333,9 +333,16 @@ include __DIR__ . "/partial/head.php";
         if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
 
         if (!locationGroups[report.locationID]) {
-            locationGroups[report.locationID] = { latitude, longitude, count: 0 };
+            locationGroups[report.locationID] = {
+                latitude, longitude, count: 0,
+                address: report.address || "",
+                categories: {}
+            };
         }
-        locationGroups[report.locationID].count++;
+        const group = locationGroups[report.locationID];
+        group.count++;
+        const category = report.categoryName || "Other";
+        group.categories[category] = (group.categories[category] || 0) + 1;
     });
 
     const heatPoints = Object.values(locationGroups)
@@ -357,6 +364,57 @@ include __DIR__ . "/partial/head.php";
             }
         }).addTo(map);
     }
+
+    /* Hover (or tap) a hotspot: total reports and the count per category.
+       Invisible circles sit on each hotspot; they only show the tooltip and
+       do not block dragging or zooming the map. Text is set with textContent,
+       so addresses and category names are never treated as HTML. */
+    function hotspotTooltip(group) {
+        const box = document.createElement("div");
+        box.className = "hm-tip";
+
+        const title = document.createElement("strong");
+        title.className = "hm-tip-title";
+        title.textContent = group.address || "Unnamed location";
+
+        const total = document.createElement("span");
+        total.className = "hm-tip-total";
+        total.textContent = group.count + (group.count === 1 ? " report" : " reports");
+
+        const list = document.createElement("ul");
+        Object.entries(group.categories)
+            .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+            .forEach(([name, count]) => {
+                const item = document.createElement("li");
+                const label = document.createElement("span");
+                label.textContent = name;
+                const value = document.createElement("b");
+                value.textContent = count;
+                item.append(label, value);
+                list.appendChild(item);
+            });
+
+        box.append(title, total, list);
+        return box;
+    }
+
+    Object.values(locationGroups).forEach((group) => {
+        L.circleMarker([group.latitude, group.longitude], {
+            radius: 22,
+            stroke: false,
+            fillColor: "#000",
+            fillOpacity: 0.001,
+            bubblingMouseEvents: true
+        })
+            .bindTooltip(hotspotTooltip(group), {
+                direction: "top",
+                offset: [0, -18],
+                opacity: 1,
+                className: "hm-tip-wrap"
+            })
+            .on("click", function () { this.openTooltip(); })
+            .addTo(map);
+    });
 
     if (heatPoints.length > 0) {
         map.fitBounds(L.latLngBounds(heatPoints.map((p) => [p[0], p[1]])).pad(0.15));

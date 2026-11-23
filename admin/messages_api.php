@@ -125,7 +125,11 @@ try {
                 csSaveReplyLink($conn, $newKey[0], $newKey[1], $replyParts[0], $replyParts[1]);
             }
 
-            $notice = "The barangay replied about your report " . $reportID . ": " . $preview;
+            /* Same wording as the mobile API (admin_reply_report_message.php): the app
+               hides notifications that start like this from the report's chat, because
+               the reply itself is already shown there. Otherwise it appears twice. */
+            $excerpt = mb_strlen($message) > 80 ? mb_substr($message, 0, 77) . "..." : $message;
+            $notice = "New reply from your barangay on report " . $reportID . ": " . $excerpt;
             $stmt = $conn->prepare(
                 "INSERT INTO notification (notifID, userID, reportID, message, isRead) VALUES (?, ?, ?, ?, 0)"
             );

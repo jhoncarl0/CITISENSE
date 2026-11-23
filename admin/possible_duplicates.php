@@ -87,7 +87,7 @@ function dupReportRow(array $report, bool $isMain, string $groupID, string $main
         </div>
 
         <div class="dup-actions">
-            <?php if ($isOpenForAction): ?>
+            <?php if ($isOpenForAction && !$isMain): /* the suggested main report is kept */ ?>
                 <button type="button" class="cs-btn cs-btn-danger-outline cs-btn-sm" data-mark-duplicate="<?= csEscape($report["reportID"]) ?>" data-group="<?= csEscape($groupID) ?>">
                     <i class="bi bi-files" aria-hidden="true"></i> Mark as Duplicate
                 </button>

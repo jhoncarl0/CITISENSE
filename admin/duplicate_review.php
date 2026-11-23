@@ -10,6 +10,9 @@
  *       Logs that REP024 was closed as a duplicate of REP013 (the report
  *       itself is rejected separately with reject_report.php /
  *       update_report_status.php).
+ *   { "action": "check_duplicate", "reportID": "REP024", "otherIDs": ["REP013"] }
+ *       Asked BEFORE a report is closed as a duplicate: refuses when the
+ *       report is the suggested main report of its group (nothing is saved).
  *
  * Only reports of the administrator's own barangay are accepted.
  */
@@ -48,7 +51,7 @@ $otherIDs = array_values(array_unique(array_filter(
     static fn($id) => $id !== "" && strlen($id) <= 50
 )));
 
-if (!in_array($action, ["not_duplicate", "duplicate"], true) || $reportID === "" || !$otherIDs || count($otherIDs) > 50) {
+if (!in_array($action, ["not_duplicate", "duplicate", "check_duplicate"], true) || $reportID === "" || !$otherIDs || count($otherIDs) > 50) {
     reviewResponse(400, ["success" => false, "message" => "Invalid request data."]);
 }
 
@@ -74,6 +77,23 @@ try {
 
     if (count(array_unique($found)) !== count($ids)) {
         reviewResponse(404, ["success" => false, "message" => "One of the reports was not found in your barangay."]);
+    }
+
+    /* The suggested main report of a group is kept: it cannot be marked as a duplicate. */
+    if ($action === "check_duplicate" || $action === "duplicate") {
+        foreach (csGroupDuplicatePairs(csFindDuplicatePairs($conn, $barangayID, true)) as $group) {
+            if ((string) $group["main"]["reportID"] === $reportID) {
+                reviewResponse(409, [
+                    "success" => false,
+                    "message" => "Report " . $reportID . " is the suggested main report, so it cannot be marked as a duplicate. "
+                        . "Mark the other reports as duplicates of it instead.",
+                ]);
+            }
+        }
+    }
+
+    if ($action === "check_duplicate") {
+        reviewResponse(200, ["success" => true, "message" => "OK"]);
     }
 
     $now = date("Y-m-d H:i:s");

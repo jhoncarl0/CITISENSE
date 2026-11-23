@@ -28,22 +28,29 @@ $stmt->execute();
 
 $result = $stmt->get_result();
 
-if ($result->num_rows !== 1) {
+$user = $result->num_rows === 1 ? $result->fetch_assoc() : null;
+$stmt->close();
+
+/*
+ * Check the password first, also when the email is unknown (against a dummy
+ * hash, so both cases take the same time). Only a correct password reveals
+ * that an account is not an administrator account.
+ */
+$storedHash = (string) ($user["pass"] ?? '$2y$10$0123456789012345678901uK5Yy1eW7lC3r0oQyZ1Gk3n7aYw9mS2');
+$passwordOk = password_verify($password, $storedHash);
+
+if (!$user || !$passwordOk) {
     header("Location: ../../admin/login.php?error=invalid");
     exit;
 }
-
-$user = $result->fetch_assoc();
 
 if ($user["role"] !== "admin") {
     header("Location: ../../admin/login.php?error=notadmin");
     exit;
 }
 
-if (!password_verify($password, $user["pass"])) {
-    header("Location: ../../admin/login.php?error=invalid");
-    exit;
-}
+// New session ID after logging in (prevents session fixation).
+session_regenerate_id(true);
 
 $_SESSION["admin_id"] = $user["userID"];
 $_SESSION["admin_name"] = $user["firstName"] . " " . $user["lastName"];

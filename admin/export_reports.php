@@ -302,7 +302,8 @@ $stmt = $conn->prepare(
 
      FROM reports
 
-     WHERE barangayID = ?'
+     WHERE barangayID = ?
+       AND categoryID NOT IN (SELECT bd.categoryID FROM categories bd WHERE LOWER(TRIM(bd.categoryName)) = \'blocked drainage\')'
 
 );
 
@@ -372,6 +373,8 @@ $stmt = $conn->prepare(
 
        AND r.barangayID = ?
 
+     WHERE LOWER(TRIM(c.categoryName)) <> \'blocked drainage\'
+
      GROUP BY c.categoryID, c.categoryName
 
      ORDER BY c.categoryName ASC'
@@ -428,6 +431,8 @@ $stmt = $conn->prepare(
 
        AND r.barangayID = ?
 
+       AND r.categoryID NOT IN (SELECT bd.categoryID FROM categories bd WHERE LOWER(TRIM(bd.categoryName)) = \'blocked drainage\')
+
      GROUP BY s.statusID, s.statusName
 
      ORDER BY s.statusID ASC'
@@ -479,6 +484,7 @@ $stmt = $conn->prepare(
      FROM reports r
 
      WHERE r.barangayID = ?
+       AND r.categoryID NOT IN (SELECT bd.categoryID FROM categories bd WHERE LOWER(TRIM(bd.categoryName)) = \'blocked drainage\')
 
      GROUP BY r.categoryID, r.statusID'
 
@@ -566,6 +572,7 @@ $stmt = $conn->prepare(
      LEFT JOIN location l
         ON l.locationID = r.locationID
      WHERE r.barangayID = ?
+       AND r.categoryID NOT IN (SELECT bd.categoryID FROM categories bd WHERE LOWER(TRIM(bd.categoryName)) = \'blocked drainage\')
        AND r.dateReported >= ?
        AND r.dateReported < ?
      ORDER BY r.dateReported DESC, r.reportID DESC'
