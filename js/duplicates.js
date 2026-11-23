@@ -49,6 +49,10 @@
     function openMark(reportID, groupID) {
         const group = groups[groupID];
         if (!group) return;
+        if (reportID === group.main) {
+            CS.toast("Report " + reportID + " is the suggested main report, so it cannot be marked as a duplicate.", "error");
+            return;
+        }
 
         current = { reportID, group };
         const others = group.ids.filter((id) => id !== reportID);
@@ -94,6 +98,13 @@
         button.textContent = "Saving…";
 
         try {
+            // The server checks first (e.g. the main report cannot be marked); nothing is closed if it refuses.
+            await postJSON("duplicate_review.php", {
+                action: "check_duplicate",
+                reportID: current.reportID,
+                otherIDs: [select.value]
+            });
+
             if (status === "STAT001") {
                 await postJSON("reject_report.php", { reportID: current.reportID, reason: text });
             } else {

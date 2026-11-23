@@ -136,3 +136,55 @@
         padding: 14px 18px 18px;
     }
 }
+
+/* Hotspot tooltip: total reports and the count per category */
+.leaflet-tooltip.hm-tip-wrap {
+    padding: 0;
+    border: 1px solid var(--cs-border);
+    border-radius: 12px;
+    background: var(--cs-surface);
+    box-shadow: 0 10px 28px rgba(15, 30, 70, 0.18);
+    color: var(--cs-text);
+    white-space: normal;
+}
+
+.hm-tip {
+    min-width: 180px;
+    max-width: min(280px, 70vw);
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.hm-tip-title {
+    display: block;
+    color: var(--cs-navy);
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+
+.hm-tip-total {
+    display: block;
+    margin: 2px 0 6px;
+    color: var(--cs-primary);
+    font-weight: 700;
+}
+
+.hm-tip ul {
+    margin: 0;
+    padding: 6px 0 0;
+    border-top: 1px solid var(--cs-border);
+    list-style: none;
+}
+
+.hm-tip li {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    color: var(--cs-muted);
+}
+
+.hm-tip li b {
+    color: var(--cs-text);
+}

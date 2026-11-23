@@ -88,6 +88,7 @@ $sql = "
     LEFT JOIN location l ON r.locationID = l.locationID
     LEFT JOIN users u ON r.userID = u.userID
     WHERE r.barangayID = ?
+      AND COALESCE(LOWER(TRIM(c.categoryName)), '') <> 'blocked drainage'
       AND r.dateReported >= ?
       AND r.dateReported < ?
     ORDER BY r.dateReported DESC

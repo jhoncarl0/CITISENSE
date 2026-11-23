@@ -57,6 +57,7 @@
 
         function updateHint() {
             hint.textContent = about.value ? hint.dataset.report : hint.dataset.general;
+            hint.classList.toggle("is-warning", !about.value);
         }
         about.addEventListener("change", updateHint);
         updateHint();
@@ -181,8 +182,7 @@
                 CS.flashAfterReload(data.message, "success");
                 // Keep the chosen report selected after the reload.
                 const url = new URL(window.location.href);
-                if (about.value) url.searchParams.set("report", about.value);
-                else url.searchParams.delete("report");
+                url.searchParams.set("report", about.value || "general");
                 window.location.replace(url.toString());
             } catch (error) {
                 CS.toast(error.message, "error");
@@ -191,4 +191,49 @@
             }
         });
     }
+})();
+
+/* Live updates: every 15 seconds (and when the tab becomes visible again) the
+   page quietly checks for new messages and updates the conversation and the
+   list, without reloading and without touching what you are typing. */
+(function () {
+    "use strict";
+
+    const list = document.getElementById("msgMessages");
+    const threads = document.querySelector(".msg-thread-list");
+    if (!list && !threads) return;
+
+    const keysOf = (root) => Array.from(root.querySelectorAll("[data-key]"), (el) => el.dataset.key).join(",");
+    let busy = false;
+
+    async function refresh() {
+        if (busy || document.hidden) return;
+        busy = true;
+        try {
+            const response = await fetch(window.location.href, { headers: { Accept: "text/html" }, cache: "no-store" });
+            if (!response.ok || response.redirected) return; // e.g. logged out: keep the page as it is
+            const doc = new DOMParser().parseFromString(await response.text(), "text/html");
+
+            const freshList = doc.getElementById("msgMessages");
+            if (list && freshList && keysOf(freshList) !== keysOf(list)) {
+                const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 60;
+                list.innerHTML = freshList.innerHTML;
+                if (atBottom) list.scrollTop = list.scrollHeight;
+            }
+
+            const freshThreads = doc.querySelector(".msg-thread-list");
+            if (threads && freshThreads && freshThreads.innerHTML !== threads.innerHTML) {
+                threads.innerHTML = freshThreads.innerHTML;
+            }
+        } catch (error) {
+            /* Offline for a moment: try again at the next check. */
+        } finally {
+            busy = false;
+        }
+    }
+
+    window.setInterval(refresh, 15000);
+    document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) refresh();
+    });
 })();

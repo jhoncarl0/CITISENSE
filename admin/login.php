@@ -26,21 +26,7 @@ include __DIR__ . "/partial/head.php";
 
 <main class="login-page">
 
-    <!-- Brand panel (desktop/tablet) -->
-    <section class="login-brand" aria-hidden="true">
-        <div class="login-mascot-stage" data-mascot-stage>
-            <span class="login-mascot-glow"></span>
-            <span class="login-sparkle s1"></span>
-            <span class="login-sparkle s2"></span>
-            <span class="login-sparkle s3"></span>
-            <div class="login-mascot-float">
-                <img class="login-brand-badge" src="../css/images/citisense-badge.png" alt="" data-mascot>
-            </div>
-            <span class="login-mascot-shadow"></span>
-        </div>
-        <h2>Making Every Report <span>Count</span></h2>
-        <p>Manage community reports, keep residents updated, and build a safer and cleaner barangay together.</p>
-    </section>
+    <?php include __DIR__ . "/partial/login_brand.php"; ?>
 
     <!-- Login form -->
     <section class="login-panel">
@@ -52,8 +38,15 @@ include __DIR__ . "/partial/head.php";
                 <span class="login-mascot-shadow"></span>
             </div>
 
-            <h1>Welcome back to <span>CitiSense</span></h1>
+            <h1>Welcome back to <span>CitiSense</span>, Admin!</h1>
             <p class="login-intro">Log in to manage and respond to community reports.</p>
+
+            <?php if (($_GET["reset"] ?? "") === "1"): ?>
+                <div class="cs-alert cs-alert-success login-success" role="status">
+                    <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+                    <div class="cs-alert-body">Your password was changed. You can now log in with your new password.</div>
+                </div>
+            <?php endif; ?>
 
             <?php if ($errorMessage !== ""): ?>
                 <div class="cs-alert cs-alert-error" role="alert">
@@ -120,8 +113,7 @@ include __DIR__ . "/partial/head.php";
             </form>
 
             <p class="login-help">
-                <i class="bi bi-info-circle" aria-hidden="true"></i>
-                Forgot your password? Please contact your CitiSense system administrator.
+                <a href="forgot_password.php"><i class="bi bi-key" aria-hidden="true"></i> Forgot your password?</a>
             </p>
         </div>
     </section>

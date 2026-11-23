@@ -780,3 +780,8 @@ a.msg-quote:hover {
         align-items: stretch;
     }
 }
+
+/* Warning under the message box when "General message" is chosen */
+.msg-reply .cs-hint.is-warning {
+    color: var(--cs-pending-text, #92400e);
+}

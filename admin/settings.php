@@ -13,6 +13,7 @@ if (
 require_once __DIR__ . "/../config/database.php";
 require_once __DIR__ . "/partial/helpers.php";
 require_once __DIR__ . "/partial/uploads.php";
+require_once __DIR__ . "/partial/passwords.php";
 
 $adminID = (string) $_SESSION["admin_id"];
 $barangayID = (string) $_SESSION["barangay_id"];
@@ -294,13 +295,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             } elseif ($newPassword !== $confirmPassword) {
                 $message = "The new passwords do not match.";
                 $messageType = "error";
-            } elseif (strlen($newPassword) < 8) {
-                $message =
-                    "Your new password must be at least 8 characters long.";
-                $messageType = "error";
-            } elseif (strlen($newPassword) > 72) {
-                $message =
-                    "Your new password must not exceed 72 bytes.";
+            } elseif (
+                $passwordProblems = csPasswordProblems(
+                    $newPassword,
+                    (string) ($admin["email"] ?? "")
+                )
+            ) {
+                // Same rules as the browser shows (partial/passwords.php).
+                $message = "Your new password is not strong enough: "
+                    . implode(" ", $passwordProblems);
                 $messageType = "error";
             } else {
                 $stmt = $conn->prepare("
@@ -365,6 +368,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     $stmt->close();
 
                     if ($updated) {
+                        // New session ID after a credential change.
+                        session_regenerate_id(true);
+
                         $message = "Password changed successfully.";
                         $messageType = "success";
                     } else {
@@ -524,7 +530,7 @@ include __DIR__ . "/partial/head.php";
         <section class="cs-card set-password" aria-labelledby="passwordHeading">
             <div class="cs-card-body">
                 <h2 id="passwordHeading" class="cs-section-title">Change password</h2>
-                <p class="cs-hint set-note">Use at least 8 characters. A mix of letters, numbers and symbols is safer.</p>
+                <p class="cs-hint set-note">Use <?= CS_PASSWORD_MIN ?> to <?= CS_PASSWORD_MAX ?> characters with an uppercase letter, a lowercase letter, a number and a symbol. Spaces and emojis are not allowed.</p>
 
                 <form id="passwordForm" action="settings.php" method="POST" autocomplete="off" class="set-password-form">
                     <input type="hidden" name="csrf_token" value="<?= e($_SESSION["settings_csrf"]) ?>">
@@ -534,7 +540,7 @@ include __DIR__ . "/partial/head.php";
                         <?php
                         $passwordFields = [
                             ["currentPassword", "current_password", "Current password", "current-password", ""],
-                            ["newPassword", "new_password", "New password", "new-password", "At least 8 characters."],
+                            ["newPassword", "new_password", "New password", "new-password", ""],
                             ["confirmPassword", "confirm_password", "Type the new password again", "new-password", ""],
                         ];
                         ?>
@@ -548,7 +554,8 @@ include __DIR__ . "/partial/head.php";
                                         name="<?= $name ?>"
                                         class="cs-input"
                                         autocomplete="<?= $autocomplete ?>"
-                                        <?= $name !== "current_password" ? 'minlength="8" maxlength="72"' : "" ?>
+                                        <?= $name !== "current_password" ? 'minlength="' . CS_PASSWORD_MIN . '" maxlength="' . CS_PASSWORD_MAX . '"' : "" ?>
+                                        <?= $name === "new_password" ? 'data-password-rules data-confirm="confirmPassword" data-email="' . e((string) ($admin["email"] ?? "")) . '"' : "" ?>
                                         required
                                     >
                                     <button type="button" class="set-show-password" data-toggle-password="<?= $id ?>" aria-pressed="false">
@@ -580,6 +587,7 @@ include __DIR__ . "/partial/head.php";
 </main>
 
 <?php include __DIR__ . "/partial/scripts.php"; ?>
+<script src="../js/password-rules.js?v=<?= $csAssetVersion ?? "2.0" ?>"></script>
 
 <script>
 (() => {

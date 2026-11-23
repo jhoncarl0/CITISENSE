@@ -146,7 +146,7 @@ $statTiles = [
 
 $pageTitle = "Dashboard";
 $pageStyles = ["dashboard.css"];
-$pageHead = '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">';
+$pageHead = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">';
 include __DIR__ . "/partial/head.php";
 ?>
 <body>
@@ -308,7 +308,7 @@ include __DIR__ . "/partial/head.php";
 
 <?php include __DIR__ . "/partial/scripts.php"; ?>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script>
 (function () {
