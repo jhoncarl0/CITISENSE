@@ -1600,26 +1600,35 @@ button.cs-stat:hover {
         border-bottom: 0;
     }
 
+    /* Same "label  value" layout as the report details (.cs-facts):
+       everything left-aligned in two columns. */
     .cs-table-stack td {
-        display: flex;
-        justify-content: space-between;
-        gap: 16px;
-        padding: 6px 0;
+        display: grid;
+        grid-template-columns: 124px minmax(0, 1fr);
+        gap: 10px;
+        padding: 4px 0;
         border: 0;
-        text-align: right;
+        text-align: left;
+        overflow-wrap: anywhere;
     }
 
     .cs-table-stack td::before {
         content: attr(data-label);
-        flex-shrink: 0;
         font-size: 14px;
         font-weight: 600;
         color: var(--cs-subtle);
-        text-align: left;
+    }
+
+    .cs-table-stack td[data-label=""] {
+        display: block;
     }
 
     .cs-table-stack td[data-label=""]::before {
         display: none;
+    }
+
+    .cs-table-stack td:first-child {
+        padding-bottom: 8px;
     }
 
     .cs-table-stack .cs-col-actions {
@@ -1712,7 +1721,14 @@ button.cs-stat:hover {
     overflow-wrap: anywhere;
 }
 
+/* Label beside the value on phones too; stacked only on very narrow screens. */
 @media (max-width: 480px) {
+    .cs-facts > div {
+        grid-template-columns: 108px minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 340px) {
     .cs-facts > div {
         grid-template-columns: 1fr;
         gap: 0;

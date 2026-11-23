@@ -90,3 +90,13 @@
         text-align: left;
     }
 }
+
+@media (max-width: 640px) {
+    .users-actions {
+        padding-top: 10px !important;
+    }
+
+    .users-actions .cs-btn {
+        width: 100%;
+    }
+}

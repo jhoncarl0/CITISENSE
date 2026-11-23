@@ -785,3 +785,98 @@ a.msg-quote:hover {
 .msg-reply .cs-hint.is-warning {
     color: var(--cs-pending-text, #92400e);
 }
+
+/* Phones: bubbles use the width; Reply / Delete sit in a small row under the
+   bubble instead of beside it; the conversation header is compact. */
+@media (max-width: 640px) {
+    .msg-messages {
+        padding: 14px 12px;
+    }
+
+    .msg-bubble-row {
+        max-width: 100%;
+        flex-wrap: wrap;
+        gap: 4px 8px;
+    }
+
+    .msg-bubble-wrap {
+        max-width: calc(100% - 42px);
+    }
+
+    .msg-bubble-row.is-mine .msg-bubble-wrap {
+        max-width: 88%;
+    }
+
+    .msg-actions {
+        flex-basis: 100%;
+        order: 3;
+        justify-content: flex-start;
+        padding-left: 42px;
+        opacity: 1;
+    }
+
+    .is-mine .msg-actions {
+        order: 3;
+        justify-content: flex-end;
+        padding-left: 0;
+    }
+
+    .msg-action {
+        width: 30px;
+        height: 30px;
+        font-size: 14px;
+    }
+
+    .msg-sender {
+        flex-wrap: wrap;
+        gap: 0 8px;
+    }
+
+    .msg-report-tag {
+        max-width: 100%;
+    }
+
+    .msg-thread-header {
+        padding: 14px;
+    }
+
+    .msg-thread-heading {
+        gap: 10px;
+    }
+
+    .msg-profile-avatar {
+        width: 42px;
+        height: 42px;
+        font-size: 17px;
+    }
+
+    .msg-thread-heading h2 {
+        font-size: 18px;
+        line-height: 1.25;
+    }
+
+    .msg-thread-heading p {
+        font-size: 14px;
+    }
+
+    .msg-thread-heading .cs-btn {
+        padding: 0 10px;
+    }
+
+    .msg-reply {
+        padding: 12px 14px 14px;
+    }
+}
+
+/* Very small phones: the Profile button shows only its icon. */
+@media (max-width: 400px) {
+    .msg-profile-label {
+        display: none;
+    }
+
+    .msg-profile-btn {
+        width: 40px;
+        padding: 0 !important;
+        justify-content: center;
+    }
+}
