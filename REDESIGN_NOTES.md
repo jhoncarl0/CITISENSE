@@ -285,5 +285,6 @@ in, or which ones are missing and where it looked.
 * **Report cards** (Reports, Possible Duplicates) list their details one per line with labels (Report ID, Type of issue, Submitted, Reported by).
 * **Expected completion date** cannot be earlier than the day the report was accepted (the latest move to In Progress); the same day is allowed. Checked in the browser and on the server.
 * **Uploads on hosting (Railway volume)**, admin service environment variables:
-  * `CS_UPLOAD_ROOT`: the volume's mount path (e.g. `/data`). Admin profile pictures and announcement pictures are saved there and served through `admin/media.php`.
+  * If the volume is mounted on the site's `uploads` folder (Railway: **`/app/uploads`**), nothing needs to be set: admin profile pictures (`uploads/profile_pictures/`) and announcement pictures (`uploads/announcements/`) are saved there. Leave `CS_UPLOAD_ROOT` empty in that case.
+  * `CS_UPLOAD_ROOT` (only for a volume mounted elsewhere): the volume's mount path (e.g. `/data`). Admin profile pictures and announcement pictures are saved there and served through `admin/media.php`.
   * `CS_MEDIA_FALLBACK_URL`: the mobile API's address (e.g. `https://citisense-api-production.up.railway.app/`). Residents' report photos and profile pictures that are not on the admin server are loaded from there.

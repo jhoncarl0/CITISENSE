@@ -12,6 +12,7 @@ if (
 
 require_once __DIR__ . "/../config/database.php";
 require_once __DIR__ . "/partial/helpers.php";
+require_once __DIR__ . "/partial/uploads.php";
 
 $adminID = (string) $_SESSION["admin_id"];
 $barangayID = (string) $_SESSION["barangay_id"];
@@ -160,13 +161,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     $message = "Use a valid JPG, PNG, or WEBP image.";
                     $messageType = "error";
                 } else {
-                    // On hosting with a persistent volume (CS_UPLOAD_ROOT), save there.
-                    $profileBase = CS_UPLOAD_ROOT !== ""
-                        ? CS_UPLOAD_ROOT . "/admin"
-                        : __DIR__;
-
-                    $uploadDirectory =
-                        $profileBase . "/uploads/profile_pictures/";
+                    // Saved in the site's uploads folder (uploads/profile_pictures/),
+                    // like announcement pictures, so a hosting volume mounted on
+                    // uploads (e.g. Railway /app/uploads) keeps it.
+                    $uploadDirectory = csUploadDir("profile_pictures");
 
                     if (
                         !is_dir($uploadDirectory) &&
@@ -229,7 +227,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                         "uploads/profile_pictures/"
                                     )
                                 ) {
-                                    $oldFile = $profileBase . "/" . $oldPicture;
+                                    $oldFile = dirname($uploadDirectory, 2) . "/" . $oldPicture;
 
                                     $realUploadDirectory =
                                         realpath($uploadDirectory);
