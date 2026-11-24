@@ -314,3 +314,63 @@
         margin-top: 0;
     }
 }
+
+/* Reports already marked as duplicates (kept here until the main report is
+   accepted and has an expected completion date) */
+.dup-report.is-linked {
+    background: #f6fbf7;
+}
+
+.dup-linked-tag {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 8px 0 0;
+    padding: 6px 12px;
+    border-radius: 14px;
+    background: var(--cs-resolved-bg, #e7f6ec);
+    color: var(--cs-resolved-text, #166534);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.dup-linked-tag i {
+    margin-top: 2px;
+}
+
+.dup-confidence.is-marked {
+    background: var(--cs-resolved-bg, #e7f6ec);
+    color: var(--cs-resolved-text, #166534);
+}
+
+.dup-next-step {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    margin: 0 22px 14px;
+    padding: 12px 14px;
+    border-radius: var(--cs-radius-sm);
+    background: var(--cs-primary-soft);
+    color: var(--cs-navy);
+    font-size: 15px;
+}
+
+.dup-next-step > i {
+    color: var(--cs-primary);
+}
+
+.dup-next-step p {
+    flex: 1 1 260px;
+    margin: 0;
+}
+
+@media (max-width: 640px) {
+    .dup-next-step {
+        margin: 0 14px 12px;
+    }
+
+    .dup-next-step .cs-btn {
+        width: 100%;
+    }
+}
