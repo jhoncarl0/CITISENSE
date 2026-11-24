@@ -26,6 +26,7 @@ $navProfilePic = "";
 $navDuplicateGroups = 0;
 $navUnreadMessages = 0;
 $navUnreadAnnouncements = 0;
+$navNewFeedback = 0;
 
 if (
     isset($conn) &&
@@ -71,11 +72,13 @@ if (
         require_once __DIR__ . "/duplicates.php";
         require_once __DIR__ . "/messages.php";
         require_once __DIR__ . "/resident_messages.php";
+        require_once __DIR__ . "/feedback.php";
 
         $navBarangay = (string) $_SESSION["barangay_id"];
         $navDuplicateGroups = count(csGroupDuplicatePairs(csFindDuplicatePairs($conn, $navBarangay, false)));
         $navUnreadMessages = csUnreadResidentCount($conn, $navBarangay);
         $navUnreadAnnouncements = csUnreadThreadCount($conn, $navBarangay, "announcement");
+        $navNewFeedback = csUnreadFeedbackCount($conn, $navBarangay);
     } catch (Throwable $navError) {
         error_log("CitiSense sidebar counts: " . $navError->getMessage());
     }
@@ -96,6 +99,7 @@ $navSections = [
     "Reports" => [
         ["reports.php", "bi-clipboard-check", "Reports", $navNeedsAction],
         ["possible_duplicates.php", "bi-files", "Possible Duplicates", $navDuplicateGroups],
+        ["feedback.php", "bi-chat-square-heart", "Resident Feedback", $navNewFeedback],
         ["heatmap.php", "bi-map", "Issue Map"],
         ["analytics.php", "bi-bar-chart-line", "Analytics"],
     ],
@@ -174,6 +178,7 @@ $navSections = [
                             "possible_duplicates.php" => [$count . " groups of possible duplicates to review", "to review"],
                             "messages.php" => [$count . " residents with new messages", "unread"],
                             "announcements.php" => [$count . " announcements with new comments", "with new comments"],
+                            "feedback.php" => [$count . " new or updated feedback from residents", "new"],
                         ][$href] ?? [(string) $count, ""];
                         ?>
                         <span class="cs-nav-count<?= $href === "possible_duplicates.php" ? " is-soft" : "" ?>" title="<?= csEscape($countHint[0]) ?>">

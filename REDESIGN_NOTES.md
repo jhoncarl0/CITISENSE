@@ -332,3 +332,17 @@ in, or which ones are missing and where it looked.
 * **Possible Duplicates**: after Mark as Duplicate the report stays in its group, marked "Marked as duplicate of
   report …", with a "Next:" note and an "Open report" button. The group leaves the page only when the main
   report is **accepted and has an expected completion date**. Reports marked after that leave at once.
+
+## Resident feedback on resolved reports (24 Nov 2026)
+
+The CitiSense app lets a resident answer, once a report is Resolved: is it fixed (yes/no), a 1–5 rating and an
+optional comment (table `report_feedback`, written by the mobile API). The admin site now shows it:
+* **Reports › Resident Feedback** (`admin/feedback.php`): every feedback, newest first, with filters All /
+  Not fixed / Fixed, a summary (count, average rating, "not fixed" count), and buttons to open the report or
+  message the resident. Feedback that is "not fixed" has a red edge.
+* **Menu badge**: number of feedback that is new or was changed since the page was last opened (remembered in
+  `message_reads`, threadType 'feedback'). Opening the page clears it.
+* **Reports page**: resolved reports show "Resident feedback: fixed / not fixed · N/5"; their View has a
+  "Resident feedback" section with the answer, stars and comment.
+* "Not fixed" answers also appear in Messages, as before (the app adds them to the report's conversation).
+* No database change; works (shows "No feedback yet") before the table exists.

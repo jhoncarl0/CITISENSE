@@ -15,6 +15,7 @@ require_once __DIR__ . "/partial/report_cycles.php";
 require_once __DIR__ . "/partial/schema.php";
 require_once __DIR__ . "/partial/duplicates.php";
 require_once __DIR__ . "/partial/duplicate_links.php";
+require_once __DIR__ . "/partial/feedback.php";
 
 $barangayID = (string) $_SESSION["barangay_id"];
 $schemaReady = csEnsureSchema($conn);
@@ -368,6 +369,9 @@ if ($detailReports) {
     $stmt->close();
 }
 
+/* Residents' feedback after a report was resolved (from the app). */
+$feedbackByReport = csFeedbackForReports($conn, $barangayID, array_keys($detailReports));
+
 $payload = [];
 
 foreach ($detailReports as $id => $report) {
@@ -416,6 +420,7 @@ foreach ($detailReports as $id => $report) {
         "linkedTo" => $linkMap[$id] ?? "",
         "linkedCount" => $linkedCount[$id] ?? 0,
         "linkedIDs" => $linkedByMain[$id] ?? [],
+        "feedback" => $feedbackByReport[$id] ?? null,
         "originalID" => $originalID,
         "originalStatusID" => (string) ($detailReports[$originalID]["statusID"] ?? $report["statusID"]),
         "originalStatus" => (string) ($detailReports[$originalID]["statusName"] ?? $report["statusName"]),
@@ -615,6 +620,12 @@ include __DIR__ . "/partial/head.php";
                                 <p class="rp-line rp-repeat"><i class="bi bi-link-45deg" aria-hidden="true"></i>Same problem as report <?= csEscape($info["originalID"]) ?></p>
                             <?php elseif ($info["cycleSize"] > 1): ?>
                                 <p class="rp-line rp-repeat"><i class="bi bi-people" aria-hidden="true"></i><?= $info["cycleSize"] - 1 ?> other <?= $info["cycleSize"] - 1 === 1 ? "resident" : "residents" ?> reported this too</p>
+                            <?php endif; ?>
+                            <?php if (!empty($info["feedback"])): $fb = $info["feedback"]; ?>
+                                <p class="rp-feedback-tag <?= $fb["fixed"] ? "is-yes" : "is-no" ?>">
+                                    <i class="bi <?= $fb["fixed"] ? "bi-check-circle-fill" : "bi-exclamation-triangle-fill" ?>" aria-hidden="true"></i>
+                                    Resident feedback: <?= $fb["fixed"] ? "fixed" : "not fixed" ?> · <?= $fb["rating"] ?>/5
+                                </p>
                             <?php endif; ?>
                             <?php if ($info["linkedCount"] > 0): ?>
                                 <p class="rp-line rp-repeat"><i class="bi bi-files" aria-hidden="true"></i><?= $info["linkedCount"] ?> duplicate <?= $info["linkedCount"] === 1 ? "report follows" : "reports follow" ?> this report's status</p>

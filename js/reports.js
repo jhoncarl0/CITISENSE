@@ -388,9 +388,28 @@
             )
             : null;
 
+        /* What the resident answered in the app after the report was resolved. */
+        const fb = report.feedback;
+        const feedbackBlock = fb
+            ? el("section", { class: "rp-section rp-feedback" + (fb.fixed ? "" : " is-not-fixed") },
+                el("h4", { text: "Resident feedback" }),
+                el("div", { class: "rp-feedback-head" },
+                    el("span", { class: "rp-feedback-fixed " + (fb.fixed ? "is-yes" : "is-no") },
+                        icon(fb.fixed ? "bi-check-circle-fill" : "bi-x-circle-fill"),
+                        fb.fixed ? "The resident says it is fixed" : "The resident says it is NOT fixed"),
+                    el("span", { class: "rp-feedback-stars", "aria-label": "Rating " + fb.rating + " out of 5" },
+                        el("span", { "aria-hidden": "true", text: "★".repeat(fb.rating) + "☆".repeat(5 - fb.rating) }),
+                        el("b", { text: " " + fb.rating + "/5" }))
+                ),
+                fb.comment ? el("blockquote", { class: "rp-feedback-comment", text: "“" + fb.comment + "”" }) : null,
+                el("p", { class: "cs-subtle", text: (fb.changed ? "Updated " : "Sent ") + fb.atLabel })
+            )
+            : null;
+
         drawerBody.replaceChildren(el("div", { class: "rp-details" },
             notice,
             duplicateNote,
+            feedbackBlock,
             formCard,
             linkedBlock,
             timelineBlock,
