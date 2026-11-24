@@ -239,20 +239,37 @@ if (!function_exists("csFindDuplicatePairs")) {
             return [];
         }
 
-        /* Pairs already reviewed as "not a duplicate". */
+        /* Pairs already reviewed as "not a duplicate", and reports already linked
+           as a duplicate of a main report (they are no longer suggested). */
         $dismissed = [];
+        $linked = [];
         try {
             $stmt = $conn->prepare(
-                "SELECT pairKey FROM duplicate_reviews WHERE barangayID = ? AND decision = 'not_duplicate'"
+                "SELECT pairKey, decision, reportA FROM duplicate_reviews
+                 WHERE barangayID = ? AND decision IN ('not_duplicate', 'linked')"
             );
             $stmt->bind_param("s", $barangayID);
             $stmt->execute();
             foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $row) {
-                $dismissed[(string) $row["pairKey"]] = true;
+                if ($row["decision"] === "linked") {
+                    $linked[(string) $row["reportA"]] = true;
+                } else {
+                    $dismissed[(string) $row["pairKey"]] = true;
+                }
             }
             $stmt->close();
         } catch (Throwable $error) {
             /* duplicate_reviews not created yet: nothing dismissed */
+        }
+
+        if ($linked) {
+            $reports = array_values(array_filter(
+                $reports,
+                static fn($report) => !isset($linked[(string) $report["reportID"]])
+            ));
+            if (count($reports) < 2) {
+                return [];
+            }
         }
 
         foreach ($reports as &$report) {

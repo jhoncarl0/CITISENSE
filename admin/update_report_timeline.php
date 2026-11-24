@@ -307,6 +307,18 @@ try {
         ]);
     }
 
+    require_once __DIR__ . "/partial/duplicate_links.php";
+
+    /* A linked duplicate takes its main report's date automatically. */
+    $linkedMainID = csLinkedMainOf($conn, $reportID);
+    if ($linkedMainID !== "") {
+        timelineJsonResponse(409, [
+            "success" => false,
+            "message" => "Report " . $reportID . " is a duplicate of report " . $linkedMainID
+                . " and gets the same date automatically. Change report " . $linkedMainID . " instead."
+        ]);
+    }
+
     $conn->begin_transaction();
     $transactionStarted = true;
 
@@ -550,6 +562,15 @@ try {
         }
 
         $statusUpdateStmt->close();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | LINKED DUPLICATES TAKE THE SAME DATE AND STATUS
+    |--------------------------------------------------------------------------
+    */
+    foreach (csSyncLinkedDuplicates($conn, $barangayID, $reportID, $adminID) as $linkedID) {
+        $updatedStatusReportIDs[] = $linkedID;
     }
 
     /*

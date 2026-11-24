@@ -6,10 +6,10 @@
  *   { "action": "not_duplicate", "reportID": "REP018", "otherIDs": ["REP020", "REP021"] }
  *       Remembers that REP018 is NOT the same problem as the listed reports,
  *       so these pairs are no longer suggested.
- *   { "action": "duplicate", "reportID": "REP024", "otherIDs": ["REP013"] }
- *       Logs that REP024 was closed as a duplicate of REP013 (the report
- *       itself is rejected separately with reject_report.php /
- *       update_report_status.php).
+ *   { "action": "duplicate", "reportID": "REP024", "otherIDs": ["REP013"], "message": "..." }
+ *       Links REP024 as a duplicate of the main report REP013 (it is NOT
+ *       rejected): REP024 takes REP013's status now and follows every later
+ *       status change (partial/duplicate_links.php). Its resident is notified.
  *   { "action": "check_duplicate", "reportID": "REP024", "otherIDs": ["REP013"] }
  *       Asked BEFORE a report is closed as a duplicate: refuses when the
  *       report is the suggested main report of its group (nothing is saved).
@@ -59,6 +59,7 @@ try {
     require_once __DIR__ . "/../config/database.php";
     require_once __DIR__ . "/partial/schema.php";
     require_once __DIR__ . "/partial/duplicates.php";
+    require_once __DIR__ . "/partial/duplicate_links.php";
 
     if (!csEnsureSchema($conn)) {
         reviewResponse(500, ["success" => false, "message" => "The database update is needed before decisions can be saved."]);
@@ -94,6 +95,52 @@ try {
 
     if ($action === "check_duplicate") {
         reviewResponse(200, ["success" => true, "message" => "OK"]);
+    }
+
+    /* Link the report to its main report and give it the same status. */
+    if ($action === "duplicate") {
+        $mainID = $otherIDs[0];
+        $message = trim((string) ($input["message"] ?? ""));
+        if (mb_strlen($message) > 1000) {
+            reviewResponse(400, ["success" => false, "message" => "The message is too long. Please keep it under 1,000 characters."]);
+        }
+
+        $stmt = $conn->prepare(
+            "SELECT r.reportID, r.statusID, s.statusName FROM reports r
+             INNER JOIN stats s ON s.statusID = r.statusID
+             WHERE r.barangayID = ? AND r.reportID IN (?, ?)"
+        );
+        $stmt->bind_param("sss", $barangayID, $reportID, $mainID);
+        $stmt->execute();
+        $statuses = [];
+        foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $row) {
+            $statuses[(string) $row["reportID"]] = strtolower(trim((string) $row["statusName"]));
+        }
+        $stmt->close();
+
+        if (in_array($statuses[$reportID] ?? "", ["resolved", "rejected"], true)) {
+            reviewResponse(409, ["success" => false, "message" => "Report " . $reportID . " is already closed, so it cannot be linked as a duplicate."]);
+        }
+        if (($statuses[$mainID] ?? "") === "rejected") {
+            reviewResponse(409, ["success" => false, "message" => "Report " . $mainID . " was rejected. Choose an open report as the main report."]);
+        }
+
+        $conn->begin_transaction();
+        try {
+            $usedMain = csLinkDuplicate($conn, $barangayID, $reportID, $mainID, $adminID);
+        } catch (DomainException $refused) {
+            $conn->rollback();
+            reviewResponse(409, ["success" => false, "message" => $refused->getMessage()]);
+        }
+        csSyncLinkedDuplicates($conn, $barangayID, $usedMain, $adminID, $message, true, [$reportID]);
+        $conn->commit();
+
+        reviewResponse(200, [
+            "success" => true,
+            "mainID" => $usedMain,
+            "message" => "Report " . $reportID . " is now linked to report " . $usedMain
+                . " and has the same status. It will follow every update of report " . $usedMain . ".",
+        ]);
     }
 
     $now = date("Y-m-d H:i:s");

@@ -66,7 +66,7 @@
     }
 
     function othersText(report) {
-        const others = report.cycleSize - 1;
+        const others = report.cycleSize - 1 + (report.linkedCount || 0);
         return others > 0
             ? " " + others + " other " + (others === 1 ? "resident" : "residents") + " reported the same problem and will be updated too."
             : "";
@@ -204,6 +204,9 @@
         const buttons = [];
         const size = inDrawer ? "" : " cs-btn-sm";
 
+        // A linked duplicate follows its main report: no actions of its own.
+        if (report.linkedTo) return buttons;
+
         if (report.statusID === PENDING) {
             if (report.isOriginal || report.originalStatusID === PENDING) {
                 buttons.push(el("button", { type: "button", class: "cs-btn cs-btn-primary" + size, "data-accept": report.id }, icon("bi-check-lg"), "Accept"));
@@ -240,7 +243,15 @@
             : null;
 
         let notice = null;
-        if (!report.isOriginal) {
+        if (report.linkedTo) {
+            notice = el("div", { class: "cs-alert cs-alert-info" }, icon("bi-files"),
+                el("div", { class: "cs-alert-body" },
+                    el("strong", { class: "cs-alert-title", text: "Duplicate of report " + report.linkedTo }),
+                    "This report was marked as a duplicate. Its status always follows report " + report.linkedTo +
+                    " automatically, and its resident gets the same updates.",
+                    reports[report.linkedTo] ? el("button", { type: "button", class: "rp-link-btn", "data-view": report.linkedTo }, "Open report " + report.linkedTo) : null
+                ));
+        } else if (!report.isOriginal) {
             const original = reports[report.originalID];
             notice = el("div", { class: "cs-alert cs-alert-info" }, icon("bi-link-45deg"),
                 el("div", { class: "cs-alert-body" },
