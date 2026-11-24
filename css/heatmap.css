@@ -189,22 +189,17 @@
     color: var(--cs-text);
 }
 
-/* Pin for a group of reports within 60 m (count in a circle) */
-.hm-pin {
-    display: grid;
-    place-items: center;
-    border: 3px solid #fff;
+/* Hover area for a group of reports within 60 m: invisible on the map,
+   it only opens the tooltip (mouse hover, tap, or keyboard focus). */
+.hm-hotspot {
     border-radius: 50%;
-    background: var(--cs-primary);
-    box-shadow: 0 4px 12px rgba(15, 30, 70, 0.35);
-    color: #fff;
+    background: transparent;
     cursor: pointer;
 }
 
-.hm-pin-count {
-    font-size: 14px;
-    font-weight: 700;
-    line-height: 1;
+.hm-hotspot:focus-visible {
+    outline: 3px solid var(--cs-primary);
+    outline-offset: 2px;
 }
 
 .heatmap-nearby {
