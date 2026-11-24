@@ -1,0 +1,152 @@
+/* ==========================================================================
+   CitiSense Admin — Resident Feedback
+   ========================================================================== */
+
+.fb-stats {
+    margin-bottom: 20px;
+}
+
+/* Filter tabs (same look as the Reports tabs) */
+.fb-filters {
+    display: flex;
+    gap: 8px;
+    padding: 16px 20px 0;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--cs-border);
+}
+
+.fb-filter {
+    display: inline-flex;
+    align-items: center;
+    min-height: 50px;
+    padding: 0 16px;
+    border-bottom: 3px solid transparent;
+    color: var(--cs-muted);
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.fb-filter:hover {
+    color: var(--cs-text);
+}
+
+.fb-filter.is-active {
+    border-bottom-color: var(--cs-primary);
+    color: var(--cs-primary);
+}
+
+.fb-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.fb-item {
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--cs-border);
+}
+
+.fb-item:last-child {
+    border-bottom: 0;
+}
+
+.fb-item.is-not-fixed {
+    box-shadow: inset 4px 0 0 var(--cs-overdue);
+}
+
+.fb-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+}
+
+.fb-head h2 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.fb-new {
+    padding: 2px 9px;
+    border-radius: var(--cs-radius-pill);
+    background: var(--cs-primary);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.fb-fixed {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: var(--cs-radius-pill);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.fb-fixed.is-yes {
+    background: var(--cs-resolved-bg);
+    color: var(--cs-resolved-text);
+}
+
+.fb-fixed.is-no {
+    background: var(--cs-overdue-bg);
+    color: var(--cs-overdue-text);
+}
+
+.fb-stars {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0 0;
+    color: #f59e0b;
+    font-size: 20px;
+    letter-spacing: 2px;
+}
+
+.fb-rating {
+    color: var(--cs-muted);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+
+.fb-comment {
+    margin: 8px 0 0;
+    padding: 10px 14px;
+    border-left: 3px solid var(--cs-primary);
+    border-radius: 0 var(--cs-radius-sm) var(--cs-radius-sm) 0;
+    background: var(--cs-surface-alt);
+    color: var(--cs-text);
+    font-size: 15px;
+    overflow-wrap: anywhere;
+}
+
+.fb-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+@media (max-width: 640px) {
+    .fb-filters {
+        padding: 8px 10px 0;
+    }
+
+    .fb-filter {
+        padding: 0 12px;
+    }
+
+    .fb-item {
+        padding: 16px 14px;
+    }
+
+    .fb-actions .cs-btn {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+}

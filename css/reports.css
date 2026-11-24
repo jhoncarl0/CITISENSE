@@ -894,3 +894,79 @@
         grid-row: 1;
     }
 }
+
+/* Resident feedback (after a report is resolved) */
+.rp-feedback-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 6px 0 0;
+    padding: 3px 10px;
+    border-radius: var(--cs-radius-pill);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.rp-feedback-tag.is-yes {
+    background: var(--cs-resolved-bg);
+    color: var(--cs-resolved-text);
+}
+
+.rp-feedback-tag.is-no {
+    background: var(--cs-overdue-bg);
+    color: var(--cs-overdue-text);
+}
+
+.rp-feedback.is-not-fixed {
+    border-color: var(--cs-overdue);
+}
+
+.rp-feedback-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 14px;
+}
+
+.rp-feedback-fixed {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+}
+
+.rp-feedback-fixed.is-yes {
+    color: var(--cs-resolved-text);
+}
+
+.rp-feedback-fixed.is-no {
+    color: var(--cs-overdue-text);
+}
+
+.rp-feedback-stars {
+    color: #f59e0b;
+    font-size: 19px;
+    letter-spacing: 2px;
+}
+
+.rp-feedback-stars b {
+    color: var(--cs-muted);
+    font-size: 15px;
+    letter-spacing: 0;
+}
+
+.rp-feedback-comment {
+    margin: 10px 0 6px;
+    padding: 10px 14px;
+    border-left: 3px solid var(--cs-primary);
+    border-radius: 0 var(--cs-radius-sm) var(--cs-radius-sm) 0;
+    background: var(--cs-surface-alt);
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+    .rp-feedback-tag {
+        justify-self: start;
+    }
+}
