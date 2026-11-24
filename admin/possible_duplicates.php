@@ -148,7 +148,7 @@ function dupReportRow(array $report, bool $isMain, string $groupID, string $main
                 <li><strong>Description</strong> — the same important words.</li>
                 <li><strong>Photo</strong> — pictures that look almost the same.</li>
             </ul>
-            <p><strong>Mark as Duplicate</strong> closes that report as Rejected with a friendly message telling the resident the problem was already reported.
+            <p><strong>Mark as Duplicate</strong> links that report to the main report: it gets the same status and follows every later update (In Progress, Resolved …), and its resident is told the problem was already reported. It is not rejected.
                <strong>Not a Duplicate</strong> keeps the report and stops suggesting it in this group.</p>
         </div>
     </details>
@@ -189,7 +189,7 @@ function dupReportRow(array $report, bool $isMain, string $groupID, string $main
     <div class="cs-modal-dialog">
         <form id="duplicateForm">
             <div class="cs-modal-body">
-                <span class="cs-confirm-icon is-danger"><i class="bi bi-files" aria-hidden="true"></i></span>
+                <span class="cs-confirm-icon"><i class="bi bi-files" aria-hidden="true"></i></span>
                 <h2 id="duplicateTitle">Mark as duplicate?</h2>
                 <p class="cs-muted" id="duplicateText"></p>
 
@@ -201,12 +201,12 @@ function dupReportRow(array $report, bool $isMain, string $groupID, string $main
                 <div class="cs-field">
                     <label class="cs-label" for="duplicateReason">Message sent to the resident</label>
                     <textarea id="duplicateReason" class="cs-textarea" rows="3" maxlength="1000" required></textarea>
-                    <span class="cs-hint">The report will be closed as Rejected with this message.</span>
+                    <span class="cs-hint">Sent to the resident with the report's new status. The report keeps following the main report.</span>
                 </div>
             </div>
             <div class="cs-modal-footer">
                 <button type="button" class="cs-btn cs-btn-ghost" data-modal-close>Cancel</button>
-                <button type="submit" class="cs-btn cs-btn-danger" id="duplicateSubmit">
+                <button type="submit" class="cs-btn cs-btn-primary" id="duplicateSubmit">
                     <i class="bi bi-files" aria-hidden="true"></i> Mark as Duplicate
                 </button>
             </div>

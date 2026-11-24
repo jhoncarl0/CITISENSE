@@ -14,6 +14,7 @@ require_once __DIR__ . "/partial/helpers.php";
 require_once __DIR__ . "/partial/report_cycles.php";
 require_once __DIR__ . "/partial/schema.php";
 require_once __DIR__ . "/partial/duplicates.php";
+require_once __DIR__ . "/partial/duplicate_links.php";
 
 $barangayID = (string) $_SESSION["barangay_id"];
 $schemaReady = csEnsureSchema($conn);
@@ -261,6 +262,10 @@ $stmt->close();
 
 $cycleMap = csClassifyReportCycles($conn, $barangayID);
 
+/* Reports linked as duplicates of a main report (they follow its status). */
+$linkMap = csDuplicateLinkMap($conn, $barangayID);
+$linkedCount = array_count_values($linkMap);
+
 /* Possible duplicates (suggestions only — reviewed on possible_duplicates.php). */
 $duplicateOf = [];
 foreach (csGroupDuplicatePairs(csFindDuplicatePairs($conn, $barangayID, true)) as $dupGroup) {
@@ -283,6 +288,10 @@ foreach (array_keys($detailReports) as $id) {
     $originalID = $cycleMap[$id]["originalID"] ?? $id;
     if (!isset($detailReports[$originalID])) {
         $missing[$originalID] = true;
+    }
+    // The main report of a linked duplicate, so "Open report …" works.
+    if (isset($linkMap[$id]) && !isset($detailReports[$linkMap[$id]])) {
+        $missing[$linkMap[$id]] = true;
     }
 }
 
@@ -394,6 +403,8 @@ foreach ($detailReports as $id => $report) {
         "images" => $imagesByReport[$id] ?? [],
         "history" => $historyByReport[$id] ?? [],
         "isOriginal" => (bool) $cycle["isOriginal"],
+        "linkedTo" => $linkMap[$id] ?? "",
+        "linkedCount" => $linkedCount[$id] ?? 0,
         "originalID" => $originalID,
         "originalStatusID" => (string) ($detailReports[$originalID]["statusID"] ?? $report["statusID"]),
         "originalStatus" => (string) ($detailReports[$originalID]["statusName"] ?? $report["statusName"]),
@@ -549,8 +560,9 @@ include __DIR__ . "/partial/head.php";
                     $id = (string) $report["reportID"];
                     $info = $payload[$id];
                     $isPending = $report["statusID"] === "STAT001";
-                    $canAccept = $isPending && ($info["isOriginal"] || $info["originalStatusID"] === "STAT001");
-                    $canChange = $info["isOriginal"] && in_array($report["statusID"], ["STAT002", "STAT004"], true);
+                    $isLinked = $info["linkedTo"] !== ""; // follows its main report: no own actions
+                    $canAccept = !$isLinked && $isPending && ($info["isOriginal"] || $info["originalStatusID"] === "STAT001");
+                    $canChange = !$isLinked && $info["isOriginal"] && in_array($report["statusID"], ["STAT002", "STAT004"], true);
                     $isRejected = strtolower(trim((string) $report["statusName"])) === "rejected";
                     ?>
                     <li class="rp-item is-<?= csEscape(csStatusSlug($report["statusName"])) ?>">
@@ -586,10 +598,15 @@ include __DIR__ . "/partial/head.php";
                                     <dd><?= csEscape($info["resident"] !== "" ? $info["resident"] : "Resident") ?></dd>
                                 </div>
                             </dl>
-                            <?php if (!$info["isOriginal"]): ?>
+                            <?php if ($isLinked): ?>
+                                <p class="rp-line rp-repeat"><i class="bi bi-files" aria-hidden="true"></i>Duplicate of report <?= csEscape($info["linkedTo"]) ?> · follows its status</p>
+                            <?php elseif (!$info["isOriginal"]): ?>
                                 <p class="rp-line rp-repeat"><i class="bi bi-link-45deg" aria-hidden="true"></i>Same problem as report <?= csEscape($info["originalID"]) ?></p>
                             <?php elseif ($info["cycleSize"] > 1): ?>
                                 <p class="rp-line rp-repeat"><i class="bi bi-people" aria-hidden="true"></i><?= $info["cycleSize"] - 1 ?> other <?= $info["cycleSize"] - 1 === 1 ? "resident" : "residents" ?> reported this too</p>
+                            <?php endif; ?>
+                            <?php if ($info["linkedCount"] > 0): ?>
+                                <p class="rp-line rp-repeat"><i class="bi bi-files" aria-hidden="true"></i><?= $info["linkedCount"] ?> duplicate <?= $info["linkedCount"] === 1 ? "report follows" : "reports follow" ?> this report's status</p>
                             <?php endif; ?>
                             <?php if ($info["duplicateGroup"] !== ""): ?>
                                 <a class="rp-dup-tag" href="possible_duplicates.php?from=<?= csEscape(rawurlencode($id)) ?>#group-<?= csEscape($info["duplicateGroup"]) ?>">
@@ -611,12 +628,12 @@ include __DIR__ . "/partial/head.php";
                                     <i class="bi bi-arrow-left-right" aria-hidden="true"></i> Change Status
                                 </button>
                             <?php endif; ?>
-                            <?php if ($isRejected): ?>
+                            <?php if ($isRejected && !$isLinked): ?>
                                 <button type="button" class="cs-btn cs-btn-ghost cs-btn-sm" data-restore="<?= csEscape($id) ?>">
                                     <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Restore
                                 </button>
                             <?php endif; ?>
-                            <?php if ($isPending): ?>
+                            <?php if ($isPending && !$isLinked): ?>
                                 <button type="button" class="cs-btn cs-btn-danger-outline cs-btn-sm" data-reject="<?= csEscape($id) ?>">
                                     <i class="bi bi-x-lg" aria-hidden="true"></i> Reject
                                 </button>

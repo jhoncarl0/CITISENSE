@@ -109,7 +109,21 @@ try {
 
     /* Find (or add) the Rejected status. */
     require_once __DIR__ . "/partial/schema.php";
+    require_once __DIR__ . "/partial/duplicate_links.php";
+    csEnsureSchema($conn);
     $rejectedID = csRejectedStatusID($conn);
+
+    /* A linked duplicate always has its main report's status. */
+    $linkedMainID = csLinkedMainOf($conn, $reportID);
+    if ($linkedMainID !== "") {
+        $conn->rollback();
+        $transactionStarted = false;
+        rejectResponse(409, [
+            "success" => false,
+            "message" => "Report " . $reportID . " is a duplicate of report " . $linkedMainID
+                . " and always has the same status. Change report " . $linkedMainID . " instead.",
+        ]);
+    }
 
     $stmt = $conn->prepare(
         "UPDATE reports SET statusID = ? WHERE reportID = ? AND barangayID = ? AND statusID = 'STAT001'"
@@ -141,12 +155,16 @@ try {
     $stmt->execute();
     $stmt->close();
 
+    // Its linked duplicates are rejected together with it.
+    $linkedUpdated = csSyncLinkedDuplicates($conn, $barangayID, $reportID, $adminID, $reason);
+
     $conn->commit();
     $transactionStarted = false;
 
     rejectResponse(200, [
         "success" => true,
-        "message" => "Report " . $reportID . " was rejected. The resident has been notified.",
+        "message" => "Report " . $reportID . " was rejected. The resident has been notified."
+            . ($linkedUpdated ? " " . count($linkedUpdated) . " linked duplicate report(s) were rejected with it." : ""),
         "reportID" => $reportID,
         "statusID" => $rejectedID,
     ]);

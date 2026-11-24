@@ -295,6 +295,8 @@ try {
 
     /* "rejected" (or the Rejected status ID) is accepted as a target. */
     require_once __DIR__ . "/partial/schema.php";
+    require_once __DIR__ . "/partial/duplicate_links.php";
+    csEnsureSchema($conn);
     $rejectedStatusID = csRejectedStatusID($conn);
 
     if (strtolower($statusID) === "rejected") {
@@ -380,6 +382,24 @@ try {
         );
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | A REPORT LINKED AS A DUPLICATE FOLLOWS ITS MAIN REPORT
+    |--------------------------------------------------------------------------
+    */
+    $linkedMainID = csLinkedMainOf($conn, $reportID);
+
+    if ($linkedMainID !== "") {
+        $conn->rollback();
+        $transactionStarted = false;
+
+        statusJsonResponse(409, [
+            "success" => false,
+            "message" => "Report " . $reportID . " is a duplicate of report " . $linkedMainID
+                . " and always has the same status. Change report " . $linkedMainID . " instead."
+        ]);
+    }
+
     $categoryID = (string) $reportKey["categoryID"];
     $locationID = (string) $reportKey["locationID"];
 
@@ -440,13 +460,17 @@ try {
             $remarks === "" ? null : $remarks
         );
 
+        // Its linked duplicates follow it back to Pending.
+        $linkedUpdated = csSyncLinkedDuplicates($conn, $barangayID, $reportID, $adminID);
+
         $conn->commit();
         $transactionStarted = false;
 
         statusJsonResponse(200, [
             "success" => true,
             "changed" => true,
-            "message" => "Report " . $reportID . " was restored to Pending.",
+            "message" => "Report " . $reportID . " was restored to Pending."
+                . ($linkedUpdated ? " " . count($linkedUpdated) . " linked duplicate report(s) follow it." : ""),
             "reportID" => $reportID,
             "statusID" => "STAT001",
             "statusName" => $targetStatusName,
@@ -605,6 +629,17 @@ try {
     }
 
     $updateStmt->close();
+
+    /*
+    |--------------------------------------------------------------------------
+    | LINKED DUPLICATES TAKE THE SAME STATUS (same transaction)
+    |--------------------------------------------------------------------------
+    */
+    foreach ($updatedReportIDs as $changedID) {
+        foreach (csSyncLinkedDuplicates($conn, $barangayID, $changedID, $adminID) as $linkedID) {
+            $updatedReportIDs[] = $linkedID;
+        }
+    }
 
     /*
     |--------------------------------------------------------------------------

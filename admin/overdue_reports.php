@@ -248,6 +248,9 @@ try {
      * Either all report/history/notification changes commit,
      * or the transaction rolls back.
      */
+    require_once __DIR__ . "/partial/duplicate_links.php";
+    $linkedDuplicates = csDuplicateLinkMap($conn, $barangayID);
+
     $conn->begin_transaction();
     $transactionStarted = true;
 
@@ -305,6 +308,14 @@ try {
 
             // The first report in this cycle is the original.
             $original = $cycle["reports"][0];
+
+            /*
+             * A report linked as a duplicate follows its main report
+             * (it becomes Overdue together with it, below).
+             */
+            if (isset($linkedDuplicates[(string) $original["reportID"]])) {
+                continue;
+            }
 
             /**
              * Only an In Progress original can trigger
@@ -379,6 +390,11 @@ try {
 
             if ($cycleChanged) {
                 $updatedOriginalIDs[] = (string) $original["reportID"];
+
+                // Linked duplicates become Overdue together with it.
+                foreach (csSyncLinkedDuplicates($conn, $barangayID, (string) $original["reportID"], $adminID) as $linkedID) {
+                    $updatedReportIDs[] = $linkedID;
+                }
             }
         }
     }

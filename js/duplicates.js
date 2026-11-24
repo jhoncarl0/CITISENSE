@@ -43,7 +43,7 @@
 
     function messageFor(otherID) {
         return "Thank you for reporting! This problem was already reported (report " + otherID +
-            ") and the barangay is handling it there.";
+            ") and the barangay is handling it there. You will get the same updates.";
     }
 
     function openMark(reportID, groupID) {
@@ -68,7 +68,8 @@
 
         document.getElementById("duplicateTitle").textContent = "Mark report " + reportID + " as a duplicate?";
         document.getElementById("duplicateText").textContent =
-            "Report " + reportID + " will be closed, and its resident will be told the problem was already reported.";
+            "Report " + reportID + " will be linked to the report you choose below. It gets the same status now " +
+            "and follows every later update of that report (In Progress, Resolved …). It is not rejected.";
         reason.value = messageFor(preferred);
         CS.openModal("duplicateModal");
     }
@@ -86,7 +87,6 @@
 
         const text = reason.value.trim();
         const button = document.getElementById("duplicateSubmit");
-        const status = current.group.status[current.reportID];
 
         if (text.length < 5) {
             CS.toast("Please write a short message for the resident.", "error");
@@ -98,26 +98,16 @@
         button.textContent = "Saving…";
 
         try {
-            // The server checks first (e.g. the main report cannot be marked); nothing is closed if it refuses.
-            await postJSON("duplicate_review.php", {
-                action: "check_duplicate",
-                reportID: current.reportID,
-                otherIDs: [select.value]
-            });
-
-            if (status === "STAT001") {
-                await postJSON("reject_report.php", { reportID: current.reportID, reason: text });
-            } else {
-                await postJSON("update_report_status.php", { reportID: current.reportID, statusID: "rejected", remarks: text });
-            }
-
-            await postJSON("duplicate_review.php", {
+            // One request: the server links the report to the main report and gives it the
+            // main report's status (it is not rejected). It refuses for the main report itself.
+            const data = await postJSON("duplicate_review.php", {
                 action: "duplicate",
                 reportID: current.reportID,
-                otherIDs: [select.value]
-            }).catch(() => null); // the report is already closed; the log is optional
+                otherIDs: [select.value],
+                message: text
+            });
 
-            CS.flashAfterReload("Report " + current.reportID + " was closed as a duplicate of report " + select.value + ".", "success");
+            CS.flashAfterReload(data.message, "success");
             window.location.reload();
         } catch (error) {
             CS.toast(error.message, "error");

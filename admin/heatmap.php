@@ -171,31 +171,116 @@ $reportsJSON = json_encode(
 
 
 // ==========================================
-// PLACES WITH THE MOST REPORTS (text summary of the map)
+// GROUP NEARBY PLACES (within 60 metres)
+// ==========================================
+//
+// Report locations within 60 m of each other are shown as ONE pin with
+// the total number of reports and the count per category. A place joins
+// a group when it is within 60 m of ANY place already in that group.
+// Only the display is grouped: every report keeps its own record and
+// coordinates in the database. Recalculated on every page load, so new
+// or changed reports are always included, each counted exactly once.
 // ==========================================
 
-$placeCounts = [];
+const HEATMAP_GROUP_METERS = 60;
 
+function heatmapDistanceMeters(float $lat1, float $lng1, float $lat2, float $lng2): float
+{
+    $r = 6371000.0;
+    $dLat = deg2rad($lat2 - $lat1);
+    $dLng = deg2rad($lng2 - $lng1);
+    $a = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
+    return 2 * $r * asin(min(1, sqrt($a)));
+}
+
+/* One entry per saved location. */
+$places = [];
 foreach ($reports as $report) {
     $key = (string) $report["locationID"];
-
-    if (!isset($placeCounts[$key])) {
-        $placeCounts[$key] = [
+    if (!isset($places[$key])) {
+        $places[$key] = [
             "address" => $report["address"] ?: "Unnamed location",
+            "lat" => (float) $report["latitude"],
+            "lng" => (float) $report["longitude"],
             "total" => 0,
             "open" => 0,
+            "categories" => [],
         ];
     }
-
-    $placeCounts[$key]["total"]++;
-
+    $places[$key]["total"]++;
     if ($report["statusID"] !== "STAT003") {
-        $placeCounts[$key]["open"]++;
+        $places[$key]["open"]++;
+    }
+    $category = (string) ($report["categoryName"] ?: "Other");
+    $places[$key]["categories"][$category] = ($places[$key]["categories"][$category] ?? 0) + 1;
+}
+
+/* Union-find: places within 60 m end up in the same group. */
+$placeKeys = array_keys($places);
+$parent = array_combine($placeKeys, $placeKeys) ?: [];
+$findRoot = static function (string $key) use (&$parent): string {
+    while ($parent[$key] !== $key) {
+        $parent[$key] = $parent[$parent[$key]];
+        $key = $parent[$key];
+    }
+    return $key;
+};
+$placeCount = count($placeKeys);
+for ($i = 0; $i < $placeCount; $i++) {
+    for ($j = $i + 1; $j < $placeCount; $j++) {
+        $a = $places[$placeKeys[$i]];
+        $b = $places[$placeKeys[$j]];
+        if (heatmapDistanceMeters($a["lat"], $a["lng"], $b["lat"], $b["lng"]) <= HEATMAP_GROUP_METERS) {
+            $parent[$findRoot($placeKeys[$i])] = $findRoot($placeKeys[$j]);
+        }
     }
 }
 
-uasort($placeCounts, static fn($a, $b) => $b["total"] <=> $a["total"]);
-$topPlaces = array_slice($placeCounts, 0, 6, true);
+$groups = [];
+foreach ($places as $key => $place) {
+    $root = $findRoot((string) $key);
+    if (!isset($groups[$root])) {
+        $groups[$root] = ["places" => [], "total" => 0, "open" => 0, "categories" => [], "latSum" => 0.0, "lngSum" => 0.0];
+    }
+    $group = &$groups[$root];
+    $group["places"][] = $place;
+    $group["total"] += $place["total"];
+    $group["open"] += $place["open"];
+    $group["latSum"] += $place["lat"] * $place["total"];
+    $group["lngSum"] += $place["lng"] * $place["total"];
+    foreach ($place["categories"] as $category => $count) {
+        $group["categories"][$category] = ($group["categories"][$category] ?? 0) + $count;
+    }
+    unset($group);
+}
+
+$mapGroups = [];
+foreach ($groups as $group) {
+    // Named after its place with the most reports.
+    usort($group["places"], static fn($x, $y) => $y["total"] <=> $x["total"]);
+    arsort($group["categories"]);
+    $mapGroups[] = [
+        "address" => $group["places"][0]["address"],
+        "nearby" => count($group["places"]) - 1,
+        "total" => $group["total"],
+        "open" => $group["open"],
+        "categories" => $group["categories"],
+        "lat" => $group["latSum"] / max(1, $group["total"]),
+        "lng" => $group["lngSum"] / max(1, $group["total"]),
+    ];
+}
+usort($mapGroups, static fn($x, $y) => $y["total"] <=> $x["total"]);
+
+$groupsJSON = json_encode(
+    $mapGroups,
+    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP
+);
+
+// ==========================================
+// PLACES WITH THE MOST REPORTS (text summary of the map, same groups as the pins)
+// ==========================================
+
+$topPlaces = array_slice($mapGroups, 0, 6);
 
 require_once __DIR__ . "/partial/helpers.php";
 
@@ -266,6 +351,9 @@ include __DIR__ . "/partial/head.php";
                             <span class="heatmap-rank"><?= $rank ?></span>
                             <span class="heatmap-place-text">
                                 <strong><?= csEscape($place["address"]) ?></strong>
+                                <?php if ($place["nearby"] > 0): ?>
+                                    <span class="heatmap-nearby">and <?= $place["nearby"] ?> nearby <?= $place["nearby"] === 1 ? "place" : "places" ?> (within 60 m)</span>
+                                <?php endif; ?>
                                 <span>
                                     <?= $place["total"] ?> <?= $place["total"] === 1 ? "report" : "reports" ?>
                                     <?php if ($place["open"] > 0): ?>
@@ -365,50 +453,58 @@ include __DIR__ . "/partial/head.php";
         }).addTo(map);
     }
 
-    /* Hover (or tap) a hotspot: total reports and the count per category.
-       Invisible circles sit on each hotspot; they only show the tooltip and
-       do not block dragging or zooming the map. Text is set with textContent,
-       so addresses and category names are never treated as HTML. */
-    function hotspotTooltip(group) {
+    /* One pin per group of places within 60 m (grouped on the server, see
+       HEATMAP_GROUP_METERS). The pin shows the total number of reports; hover
+       or tap it for the count per category. Text is set with textContent, so
+       addresses and category names are never treated as HTML. */
+    const groups = <?= $groupsJSON ?: "[]" ?>;
+
+    function groupTooltip(group) {
         const box = document.createElement("div");
         box.className = "hm-tip";
 
         const title = document.createElement("strong");
         title.className = "hm-tip-title";
-        title.textContent = group.address || "Unnamed location";
+        title.textContent = group.address;
 
         const total = document.createElement("span");
         total.className = "hm-tip-total";
-        total.textContent = group.count + (group.count === 1 ? " report" : " reports");
+        total.textContent = group.total + (group.total === 1 ? " report" : " reports")
+            + (group.nearby > 0 ? " · " + (group.nearby + 1) + " places within 60 m" : "");
 
         const list = document.createElement("ul");
-        Object.entries(group.categories)
-            .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-            .forEach(([name, count]) => {
-                const item = document.createElement("li");
-                const label = document.createElement("span");
-                label.textContent = name;
-                const value = document.createElement("b");
-                value.textContent = count;
-                item.append(label, value);
-                list.appendChild(item);
-            });
+        Object.entries(group.categories).forEach(([name, count]) => {
+            const item = document.createElement("li");
+            const label = document.createElement("span");
+            label.textContent = name;
+            const value = document.createElement("b");
+            value.textContent = count;
+            item.append(label, value);
+            list.appendChild(item);
+        });
 
         box.append(title, total, list);
         return box;
     }
 
-    Object.values(locationGroups).forEach((group) => {
-        L.circleMarker([group.latitude, group.longitude], {
-            radius: 22,
-            stroke: false,
-            fillColor: "#000",
-            fillOpacity: 0.001,
-            bubblingMouseEvents: true
+    groups.forEach((group) => {
+        const size = group.total >= 100 ? 44 : group.total >= 10 ? 38 : 32;
+        const icon = L.divIcon({
+            className: "hm-pin",
+            html: '<span class="hm-pin-count">' + Number(group.total) + "</span>",
+            iconSize: [size, size],
+            iconAnchor: [size / 2, size / 2]
+        });
+
+        L.marker([group.lat, group.lng], {
+            icon,
+            keyboard: true,
+            title: group.address + ": " + group.total + (group.total === 1 ? " report" : " reports"),
+            riseOnHover: true
         })
-            .bindTooltip(hotspotTooltip(group), {
+            .bindTooltip(groupTooltip(group), {
                 direction: "top",
-                offset: [0, -18],
+                offset: [0, -size / 2],
                 opacity: 1,
                 className: "hm-tip-wrap"
             })

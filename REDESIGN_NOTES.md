@@ -300,3 +300,26 @@ in, or which ones are missing and where it looked.
 * **Possible Duplicates**: the suggested main report has no "Mark as Duplicate" button, and the server refuses to mark it (`duplicate_review.php`, action `check_duplicate`, asked before anything is closed).
 * **Messages**: report replies use the same notification text as the mobile API, so the app does not show them twice; "About" defaults to the resident's latest report (general messages are only delivered as a notification because the app has no chat for them yet); an open conversation updates itself every 15 seconds.
 * **Layout**: dropdowns and date pickers look the same on all phones; the report details buttons wrap on small phones; the Dashboard map loads from the same CDN as the other maps.
+
+## Duplicate reports follow their main report; Issue Map groups within 60 m (24 Nov 2026)
+
+* **Mark as Duplicate no longer rejects the report.** It links the report to the main report
+  (`duplicate_reviews`, `decision = 'linked'`, `reportA` = duplicate, `reportB` = main; no new table) and
+  gives it the main report's current status. Its resident is notified that the report follows the main report.
+* **Status sync** (`admin/partial/duplicate_links.php`, `csSyncLinkedDuplicates()`): every status change of a
+  main report is copied to its linked duplicates in the same database transaction, with a history entry and a
+  notification for each resident (shown in the mobile app). Used by: Accept / Resolve / Back to New / Reject
+  (`update_report_status.php`), Reject of a Pending report (`reject_report.php`), new completion date and
+  Overdue → In Progress (`update_report_timeline.php`), and the automatic Overdue check (`overdue_reports.php`).
+  The expected completion date is copied too.
+* A linked duplicate cannot be changed on its own (the endpoints answer with which report to change instead).
+  On the Reports page it shows "Duplicate of report … · follows its status" and only **View**; the main report
+  shows how many duplicates follow it. Linked reports are no longer suggested on Possible Duplicates.
+* Linking never forms chains or circles: linking to a report that is itself a duplicate uses its main report,
+  and a main report cannot become the duplicate of its own duplicate.
+* Reports marked as duplicates **before** this change were rejected; they stay Rejected (use Restore to New and
+  mark them again if needed).
+* **Issue Map**: report locations within 60 m of each other (directly or through a chain of nearby places) are
+  shown as one pin with the total number of reports; hovering or tapping it shows the count per category.
+  The "Places with the most reports" list uses the same groups. Grouping is calculated on every page load and
+  only affects the display; reports keep their own locations in the database.
