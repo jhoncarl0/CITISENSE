@@ -488,19 +488,23 @@ include __DIR__ . "/partial/head.php";
     }
 
     groups.forEach((group) => {
-        const size = group.total >= 100 ? 44 : group.total >= 10 ? 38 : 32;
+        // Invisible hover area over the hotspot: nothing is drawn on the map
+        // (no number); the tooltip shows the details. Screen readers still
+        // get the text.
+        const size = 44;
+        const label = document.createElement("span");
+        label.className = "cs-sr-only";
+        label.textContent = group.address + ": " + group.total + (group.total === 1 ? " report" : " reports");
         const icon = L.divIcon({
-            className: "hm-pin",
-            html: '<span class="hm-pin-count">' + Number(group.total) + "</span>",
+            className: "hm-hotspot",
+            html: label.outerHTML,
             iconSize: [size, size],
             iconAnchor: [size / 2, size / 2]
         });
 
         L.marker([group.lat, group.lng], {
             icon,
-            keyboard: true,
-            title: group.address + ": " + group.total + (group.total === 1 ? " report" : " reports"),
-            riseOnHover: true
+            keyboard: true
         })
             .bindTooltip(groupTooltip(group), {
                 direction: "top",
