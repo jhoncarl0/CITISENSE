@@ -265,6 +265,10 @@ $cycleMap = csClassifyReportCycles($conn, $barangayID);
 /* Reports linked as duplicates of a main report (they follow its status). */
 $linkMap = csDuplicateLinkMap($conn, $barangayID);
 $linkedCount = array_count_values($linkMap);
+$linkedByMain = [];
+foreach ($linkMap as $dupID => $mainID) {
+    $linkedByMain[$mainID][] = (string) $dupID;
+}
 
 /* Possible duplicates (suggestions only — reviewed on possible_duplicates.php). */
 $duplicateOf = [];
@@ -292,6 +296,12 @@ foreach (array_keys($detailReports) as $id) {
     // The main report of a linked duplicate, so "Open report …" works.
     if (isset($linkMap[$id]) && !isset($detailReports[$linkMap[$id]])) {
         $missing[$linkMap[$id]] = true;
+    }
+    // The duplicates of a main report, shown inside its View.
+    foreach ($linkedByMain[$id] ?? [] as $dupID) {
+        if (!isset($detailReports[$dupID])) {
+            $missing[$dupID] = true;
+        }
     }
 }
 
@@ -405,6 +415,7 @@ foreach ($detailReports as $id => $report) {
         "isOriginal" => (bool) $cycle["isOriginal"],
         "linkedTo" => $linkMap[$id] ?? "",
         "linkedCount" => $linkedCount[$id] ?? 0,
+        "linkedIDs" => $linkedByMain[$id] ?? [],
         "originalID" => $originalID,
         "originalStatusID" => (string) ($detailReports[$originalID]["statusID"] ?? $report["statusID"]),
         "originalStatus" => (string) ($detailReports[$originalID]["statusName"] ?? $report["statusName"]),

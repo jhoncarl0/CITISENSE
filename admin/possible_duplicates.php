@@ -37,8 +37,9 @@ function dupReportRow(array $report, bool $isMain, string $groupID, string $main
     $image = csMediaUrl($report["imagePath"] ?? "");
     $match = $report["match"] ?? null;
     $isOpenForAction = in_array($report["statusID"], ["STAT001", "STAT002", "STAT004"], true);
+    $linkedTo = (string) ($report["linkedTo"] ?? ""); // already marked as a duplicate
     ?>
-    <li class="dup-report<?= $isMain ? " is-main" : "" ?>" data-report="<?= csEscape($report["reportID"]) ?>">
+    <li class="dup-report<?= $isMain ? " is-main" : "" ?><?= $linkedTo !== "" ? " is-linked" : "" ?>" data-report="<?= csEscape($report["reportID"]) ?>">
         <a class="dup-photo" href="<?= $image !== "" ? csEscape($image) : "#" ?>" <?= $image !== "" ? 'target="_blank" rel="noopener" title="Open the full-size photo"' : 'aria-hidden="true" tabindex="-1"' ?>>
             <?php if ($image !== ""): ?>
                 <img src="<?= csEscape($image) ?>" alt="Photo of report <?= csEscape($report["reportID"]) ?>" loading="lazy">
@@ -74,6 +75,13 @@ function dupReportRow(array $report, bool $isMain, string $groupID, string $main
                 <p class="dup-description">“<?= csEscape(mb_strimwidth(trim((string) $report["description"]), 0, 180, "…")) ?>”</p>
             <?php endif; ?>
 
+            <?php if ($linkedTo !== ""): ?>
+                <p class="dup-linked-tag">
+                    <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+                    Marked as duplicate of report <?= csEscape($linkedTo) ?> · follows its status and expected completion date
+                </p>
+            <?php endif; ?>
+
             <?php if ($match): ?>
                 <div class="dup-reasons" aria-label="Why this looks like a duplicate">
                     <span class="dup-confidence is-<?= csEscape(strtolower(str_replace(" ", "-", $match["confidence"]))) ?>">
@@ -87,12 +95,12 @@ function dupReportRow(array $report, bool $isMain, string $groupID, string $main
         </div>
 
         <div class="dup-actions">
-            <?php if ($isOpenForAction && !$isMain): /* the suggested main report is kept */ ?>
+            <?php if ($isOpenForAction && !$isMain && $linkedTo === ""): /* the main report is kept; marked ones are done */ ?>
                 <button type="button" class="cs-btn cs-btn-danger-outline cs-btn-sm" data-mark-duplicate="<?= csEscape($report["reportID"]) ?>" data-group="<?= csEscape($groupID) ?>">
                     <i class="bi bi-files" aria-hidden="true"></i> Mark as Duplicate
                 </button>
             <?php endif; ?>
-            <?php if (!$isMain): ?>
+            <?php if (!$isMain && $linkedTo === ""): ?>
                 <button type="button" class="cs-btn cs-btn-ghost cs-btn-sm" data-not-duplicate="<?= csEscape($report["reportID"]) ?>" data-group="<?= csEscape($groupID) ?>">
                     <i class="bi bi-x-circle" aria-hidden="true"></i> Not a Duplicate
                 </button>
@@ -160,9 +168,28 @@ function dupReportRow(array $report, bool $isMain, string $groupID, string $main
                     <header class="dup-group-header">
                         <div>
                             <h2>Possibly the same problem <span class="cs-subtle">· <?= count($group["ids"]) ?> reports</span></h2>
-                            <p>Keep the main report and close the others as duplicates, or mark any report that is different as “Not a Duplicate”.</p>
+                            <p>Keep the main report and mark the others as duplicates (they follow its status), or mark any report that is different as “Not a Duplicate”.</p>
                         </div>
                     </header>
+                    <?php
+                    $groupMain = $group["main"];
+                    $markedCount = (int) ($groupMain["linkedCount"] ?? 0);
+                    $mainAccepted = in_array($groupMain["statusID"], ["STAT002", "STAT004"], true);
+                    ?>
+                    <?php if ($markedCount > 0): ?>
+                        <div class="dup-next-step">
+                            <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
+                            <p>
+                                <?= $markedCount ?> <?= $markedCount === 1 ? "report is marked as a duplicate" : "reports are marked as duplicates" ?> of report <?= csEscape($groupMain["reportID"]) ?>.
+                                <strong>Next:</strong>
+                                <?= $mainAccepted ? "set the expected completion date of report " : "accept report " ?><?= csEscape($groupMain["reportID"]) ?><?= $mainAccepted ? "" : " and set its expected completion date" ?>.
+                                This group then leaves this page; the duplicates keep following report <?= csEscape($groupMain["reportID"]) ?>.
+                            </p>
+                            <a class="cs-btn cs-btn-primary cs-btn-sm" href="<?= csEscape(csUrl("reports.php", ["tab" => "all", "search" => $groupMain["reportID"], "open" => $groupMain["reportID"]])) ?>">
+                                Open report <?= csEscape($groupMain["reportID"]) ?>
+                            </a>
+                        </div>
+                    <?php endif; ?>
                     <ul class="dup-list">
                         <?php dupReportRow($group["main"], true, $group["id"], $group["main"]["reportID"]); ?>
                         <?php foreach ($group["members"] as $member): ?>

@@ -323,3 +323,12 @@ in, or which ones are missing and where it looked.
   shown as one pin with the total number of reports; hovering or tapping it shows the count per category.
   The "Places with the most reports" list uses the same groups. Grouping is calculated on every page load and
   only affects the display; reports keep their own locations in the database.
+
+### Update (24 Nov 2026): marked duplicates stay visible until the main report is settled
+* **Expected completion date**: a duplicate gets the main report's date when it is marked (if the main report
+  already has one) and every time the date changes.
+* **View on the main report** lists its "Duplicate reports (N)": photo, ID, type, date, resident, place,
+  status and a View button for each.
+* **Possible Duplicates**: after Mark as Duplicate the report stays in its group, marked "Marked as duplicate of
+  report …", with a "Next:" note and an "Open report" button. The group leaves the page only when the main
+  report is **accepted and has an expected completion date**. Reports marked after that leave at once.

@@ -215,7 +215,7 @@ if (!function_exists("csFindDuplicatePairs")) {
     function csFindDuplicatePairs(mysqli $conn, string $barangayID, bool $computeMissingHashes = true): array
     {
         $stmt = $conn->prepare(
-            "SELECT r.reportID, r.categoryID, r.statusID, r.locationID, r.title, r.description, r.dateReported,
+            "SELECT r.reportID, r.categoryID, r.statusID, r.locationID, r.title, r.description, r.dateReported, r.timeline,
                     c.categoryName, s.statusName, l.address, l.latitude, l.longitude,
                     u.firstName, u.lastName,
                     (SELECT ri.imagePath FROM reportimages ri WHERE ri.reportID = r.reportID
@@ -239,20 +239,19 @@ if (!function_exists("csFindDuplicatePairs")) {
             return [];
         }
 
-        /* Pairs already reviewed as "not a duplicate", and reports already linked
-           as a duplicate of a main report (they are no longer suggested). */
+        /* Pairs already reviewed as "not a duplicate", and links "duplicate -> main". */
         $dismissed = [];
-        $linked = [];
+        $links = [];
         try {
             $stmt = $conn->prepare(
-                "SELECT pairKey, decision, reportA FROM duplicate_reviews
+                "SELECT pairKey, decision, reportA, reportB FROM duplicate_reviews
                  WHERE barangayID = ? AND decision IN ('not_duplicate', 'linked')"
             );
             $stmt->bind_param("s", $barangayID);
             $stmt->execute();
             foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $row) {
                 if ($row["decision"] === "linked") {
-                    $linked[(string) $row["reportA"]] = true;
+                    $links[(string) $row["reportA"]] = (string) $row["reportB"];
                 } else {
                     $dismissed[(string) $row["pairKey"]] = true;
                 }
@@ -262,15 +261,49 @@ if (!function_exists("csFindDuplicatePairs")) {
             /* duplicate_reviews not created yet: nothing dismissed */
         }
 
-        if ($linked) {
-            $reports = array_values(array_filter(
-                $reports,
-                static fn($report) => !isset($linked[(string) $report["reportID"]])
-            ));
-            if (count($reports) < 2) {
-                return [];
+        /*
+         * Reports marked as duplicates stay in their group (shown as "Marked as
+         * duplicate") until the main report is settled: accepted (In Progress or
+         * Overdue) WITH an expected completion date. Then they leave this page.
+         * A main report that is no longer open (resolved/rejected) is settled too.
+         */
+        $byID = [];
+        foreach ($reports as $report) {
+            $byID[(string) $report["reportID"]] = $report;
+        }
+        $isSettled = static function (string $mainID) use ($byID): bool {
+            if (!isset($byID[$mainID])) {
+                return true;
+            }
+            $main = $byID[$mainID];
+            $timeline = (string) ($main["timeline"] ?? "");
+            return in_array((string) $main["statusID"], ["STAT002", "STAT004"], true)
+                && $timeline !== ""
+                && strtotime($timeline) !== strtotime((string) $main["dateReported"]);
+        };
+
+        $openLinks = [];
+        foreach ($links as $dupID => $mainID) {
+            if (!$isSettled($mainID)) {
+                $openLinks[$dupID] = $mainID;
             }
         }
+
+        $reports = array_values(array_filter(
+            $reports,
+            static fn($report) => !isset($links[(string) $report["reportID"]]) || isset($openLinks[(string) $report["reportID"]])
+        ));
+        if (count($reports) < 2) {
+            return [];
+        }
+
+        $mainsWaiting = array_count_values($openLinks);
+        foreach ($reports as &$report) {
+            $id = (string) $report["reportID"];
+            $report["linkedTo"] = $openLinks[$id] ?? "";
+            $report["linkedCount"] = $mainsWaiting[$id] ?? 0;
+        }
+        unset($report);
 
         foreach ($reports as &$report) {
             $report["reportID"] = (string) $report["reportID"];
@@ -375,6 +408,40 @@ if (!function_exists("csFindDuplicatePairs")) {
             }
         }
 
+        /* A report marked as a duplicate always stays grouped with its main report. */
+        $rowsByID = [];
+        foreach ($reports as $report) {
+            $rowsByID[$report["reportID"]] = $report;
+        }
+        foreach ($openLinks as $dupID => $mainID) {
+            if (!isset($rowsByID[$dupID], $rowsByID[$mainID])) {
+                continue;
+            }
+            $key = csPairKey($dupID, $mainID);
+            $found = false;
+            foreach ($pairs as &$pair) {
+                if ($pair["key"] === $key) {
+                    $found = true;
+                    break;
+                }
+            }
+            unset($pair);
+            if (!$found) {
+                [$older, $newer] = strcmp($rowsByID[$dupID]["dateReported"], $rowsByID[$mainID]["dateReported"]) <= 0
+                    ? [$rowsByID[$dupID], $rowsByID[$mainID]]
+                    : [$rowsByID[$mainID], $rowsByID[$dupID]];
+                $pairs[] = [
+                    "key" => $key,
+                    "score" => 100,
+                    "confidence" => "Marked",
+                    "reasons" => ["Marked as duplicate by an administrator"],
+                    "distance" => null,
+                    "older" => $older,
+                    "newer" => $newer,
+                ];
+            }
+        }
+
         usort($pairs, static fn($a, $b) => [$b["score"], $b["newer"]["dateReported"]] <=> [$a["score"], $a["newer"]["dateReported"]]);
 
         return $pairs;
@@ -423,8 +490,12 @@ if (!function_exists("csFindDuplicatePairs")) {
             $members = array_map(static fn($id) => $reports[$id], $ids);
 
             usort($members, static function ($x, $y) {
+                // A report others are linked to stays the main report; linked duplicates never are.
+                $linkedMain = static fn($r) => ($r["linkedCount"] ?? 0) > 0 ? 0 : 1;
+                $linkedDup = static fn($r) => ($r["linkedTo"] ?? "") !== "" ? 1 : 0;
                 $active = static fn($r) => in_array($r["statusID"], ["STAT002", "STAT004"], true) ? 0 : 1;
-                return [$active($x), $x["dateReported"], $x["reportID"]] <=> [$active($y), $y["dateReported"], $y["reportID"]];
+                return [$linkedMain($x), $linkedDup($x), $active($x), $x["dateReported"], $x["reportID"]]
+                    <=> [$linkedMain($y), $linkedDup($y), $active($y), $y["dateReported"], $y["reportID"]];
             });
 
             $main = array_shift($members);

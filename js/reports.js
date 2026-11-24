@@ -367,10 +367,32 @@
             )
         );
 
+        /* Reports marked as duplicates of this one: they follow its status and date. */
+        const linked = (report.linkedIDs || []).map((dupID) => reports[dupID]).filter(Boolean);
+        const linkedBlock = linked.length
+            ? el("section", { class: "rp-section rp-linked" },
+                el("h4", { text: "Duplicate reports (" + linked.length + ")" }),
+                el("p", { class: "cs-subtle", text: "Marked as duplicates of this report. They always have the same status and expected completion date, and their residents get the same updates." }),
+                el("ul", { class: "rp-linked-list" }, linked.map((dup) => el("li", {},
+                    dup.images.length
+                        ? el("img", { class: "rp-linked-thumb", src: dup.images[0], alt: "" })
+                        : el("span", { class: "rp-linked-thumb" }, icon(categoryIcon(dup.category))),
+                    el("div", { class: "rp-linked-text" },
+                        el("strong", { text: dup.id + " · " + dup.category }),
+                        el("span", { text: dup.date + (dup.resident ? " · " + dup.resident : "") }),
+                        dup.address ? el("span", { text: dup.address }) : null
+                    ),
+                    badge(dup.status),
+                    el("button", { type: "button", class: "cs-btn cs-btn-ghost cs-btn-sm", "data-view": dup.id }, "View")
+                )))
+            )
+            : null;
+
         drawerBody.replaceChildren(el("div", { class: "rp-details" },
             notice,
             duplicateNote,
             formCard,
+            linkedBlock,
             timelineBlock,
             el("section", { class: "rp-section rp-message-box" },
                 el("div", {},
