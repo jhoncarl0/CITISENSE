@@ -314,3 +314,17 @@
         width: 100%;
     }
 }
+
+.hm-tip-hint {
+    display: block;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--cs-border);
+    color: var(--cs-primary);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.leaflet-tooltip.hm-tip-wrap.hm-tip-shifted::before {
+    display: none;
+}

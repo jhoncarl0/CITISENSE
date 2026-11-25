@@ -424,3 +424,14 @@ optional comment (table `report_feedback`, written by the mobile API). The admin
   Reports across the top, then two by two. Tablets: two wide cards, then three.
 
 No database table or column was changed.
+
+### Issue Map hotspots: numbers on every spot (25 Nov 2026)
+* Every spot drawn on the heatmap now shows its total and the count per category: hover with a mouse,
+  or tap on a phone/tablet. Before, there was one hover area per group, at the group's centre, so
+  spots of a group that covers several places within 60 m showed nothing.
+* Each saved location with reports has its own hover/tap area (about the size of the drawn spot),
+  showing its group's numbers (places within 60 m are counted together, as in the list).
+* Mouse: hover shows the numbers, click opens the list of reports. Touch: the first tap shows the
+  numbers, a second tap on the same spot opens the list, tapping empty map closes the numbers.
+* The tooltip always stays inside the map: below the spot when there is no room above, moved sideways
+  near the left/right edges, and moved over the spot on very small maps.
