@@ -1564,15 +1564,23 @@ body {
 }
 
 img,
-video,
-canvas,
-svg {
+video {
     max-width: 100%;
 }
 
 img,
 video {
     height: auto;
+}
+
+/* Map layers (tiles, markers, the heatmap canvas) keep their own size:
+   their panes have no width, so a max-width would shrink them to nothing. */
+.leaflet-container img,
+.leaflet-container canvas,
+.leaflet-container svg,
+.leaflet-container video {
+    max-width: none !important;
+    max-height: none !important;
 }
 
 .cs-table-wrap {
