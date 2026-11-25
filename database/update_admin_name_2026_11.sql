@@ -14,12 +14,20 @@
 -- again.
 -- ---------------------------------------------------------------------------
 
+-- MySQL Workbench "safe update mode" (Error 1175) only allows an UPDATE whose
+-- WHERE uses a key column. These lines switch it off for this one statement,
+-- in this connection only, and switch it back on right after.
+SET @cs_safe_updates = @@SQL_SAFE_UPDATES;
+SET SQL_SAFE_UPDATES = 0;
+
 UPDATE users
 SET firstName = 'Duljo-Fatima',
     lastName  = 'Admin'
 WHERE role = 'admin'
   AND firstName = 'Christille'
   AND lastName  = 'Dablo';
+
+SET SQL_SAFE_UPDATES = @cs_safe_updates;
 
 -- Check the result: the admin account should now show the new name.
 SELECT userID, firstName, lastName, email, role

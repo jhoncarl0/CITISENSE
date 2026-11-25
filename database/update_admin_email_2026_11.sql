@@ -17,6 +17,12 @@
 -- 07dablo.christille@gmail.com, change them there to brgyduljo.fatima@gmail.com.
 -- ---------------------------------------------------------------------------
 
+-- MySQL Workbench "safe update mode" (Error 1175) only allows an UPDATE whose
+-- WHERE uses a key column. These lines switch it off for this one statement,
+-- in this connection only, and switch it back on right after.
+SET @cs_safe_updates = @@SQL_SAFE_UPDATES;
+SET SQL_SAFE_UPDATES = 0;
+
 UPDATE users
 SET email = 'brgyduljo.fatima@gmail.com'
 WHERE email = '07dablo.christille@gmail.com'
@@ -26,6 +32,8 @@ WHERE email = '07dablo.christille@gmail.com'
           SELECT userID FROM users WHERE email = 'brgyduljo.fatima@gmail.com'
       ) AS taken
   );
+
+SET SQL_SAFE_UPDATES = @cs_safe_updates;
 
 -- Check the result: the admin account should now show the new address.
 SELECT userID, firstName, lastName, email, role
