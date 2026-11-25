@@ -310,6 +310,8 @@ foreach ($groups as $group) {
         "open" => count(array_filter($groupReports, static fn($r) => $r["open"])),
         "categories" => $group["categories"],
         "reports" => $groupReports,
+        // Every place in the group: the heat is drawn at each one, so each gets a hover area.
+        "points" => array_map(static fn($place) => [$place["lat"], $place["lng"]], $group["places"]),
         "lat" => $group["latSum"] / max(1, $group["total"]),
         "lng" => $group["lngSum"] / max(1, $group["total"]),
     ];
@@ -557,34 +559,124 @@ include __DIR__ . "/partial/head.php";
         return box;
     }
 
-    groups.forEach((group) => {
-        // Invisible hover area over the hotspot: nothing is drawn on the map
-        // (no number); the tooltip shows the details. Screen readers still
-        // get the text.
-        const size = 44;
-        const label = document.createElement("span");
-        label.className = "cs-sr-only";
-        label.textContent = group.address + ": " + group.total + (group.total === 1 ? " report" : " reports");
-        const icon = L.divIcon({
-            className: "hm-hotspot",
-            html: label.outerHTML,
-            iconSize: [size, size],
-            iconAnchor: [size / 2, size / 2]
-        });
+    /* A hover/tap area on EVERY spot where heat is drawn (each saved
+       location), not only at the centre of a group, so every visible hotspot
+       shows its numbers. Places within 60 m share one group, so each of their
+       spots shows the same totals (the tooltip says how many places).
+       Mouse: hover shows the numbers, click opens the list of reports.
+       Touch: first tap shows the numbers, a second tap opens the list. */
+    const isTouch = window.matchMedia("(hover: none)").matches;
+    const hitSize = 72; // about the size of a drawn hotspot (heat radius 40 px)
+    let tappedMarker = null; // the spot whose numbers are showing after a tap
 
-        L.marker([group.lat, group.lng], {
-            icon,
-            keyboard: true
-        })
-            .bindTooltip(groupTooltip(group), {
-                direction: "top",
-                offset: [0, -size / 2],
-                opacity: 1,
-                className: "hm-tip-wrap"
+    function addHint(box) {
+        const hint = document.createElement("span");
+        hint.className = "hm-tip-hint";
+        hint.textContent = isTouch ? "Tap again to see the reports" : "Click to see the reports";
+        box.appendChild(hint);
+        return box;
+    }
+
+    /* Keep the whole tooltip inside the map (the map box cuts off anything
+       outside it): show it below the spot when there is no room above, and
+       move it sideways near the left/right edges. */
+    function placeTooltip(marker, tooltip, pass) {
+        const box = tooltip.getElement();
+        if (!box) return;
+        const size = map.getSize();
+        const point = map.latLngToContainerPoint(marker.getLatLng());
+        const width = box.offsetWidth;
+        const height = box.offsetHeight;
+        const gap = hitSize / 2 - 8;
+        const margin = 6;
+
+        const roomAbove = point.y - gap - height - margin;
+        const roomBelow = size.y - (point.y + gap + height + margin);
+        const below = roomAbove < 0 && roomBelow > roomAbove;
+
+        let shiftX = 0;
+        if (point.x - width / 2 < margin) shiftX = margin - (point.x - width / 2);
+        else if (point.x + width / 2 > size.x - margin) shiftX = (size.x - margin) - (point.x + width / 2);
+
+        // No room above or below (small map): slide it until it fits, even if
+        // it then covers part of the spot (tooltips do not block taps).
+        let slideY = 0;
+        if (roomAbove < 0 && roomBelow < 0) {
+            slideY = Math.min(-roomAbove, Math.max(0, point.y - gap - margin));
+        }
+
+        box.classList.toggle("hm-tip-shifted", shiftX !== 0 || slideY !== 0); // the arrow would point at the wrong place
+        const direction = below && !slideY ? "bottom" : "top";
+        const offsetY = direction === "bottom" ? gap : -gap + slideY;
+        const current = tooltip.options;
+        if (current.direction === direction && current.offset[0] === shiftX && current.offset[1] === offsetY) return;
+        current.direction = direction;
+        current.offset = [shiftX, offsetY];
+        box.classList.remove("leaflet-tooltip-top", "leaflet-tooltip-bottom");
+        tooltip.update();
+
+        // Moving it can change how a long address wraps (so its size):
+        // measure again once and correct.
+        if (!pass && (box.offsetWidth !== width || box.offsetHeight !== height)) {
+            placeTooltip(marker, tooltip, 1);
+        }
+    }
+
+    groups.forEach((group) => {
+        const points = (group.points && group.points.length ? group.points : [[group.lat, group.lng]])
+            .filter((point) => Number.isFinite(Number(point[0])) && Number.isFinite(Number(point[1])));
+
+        points.forEach((point, index) => {
+            // Screen readers get the text once per group; the other areas are silent.
+            const label = document.createElement("span");
+            label.className = "cs-sr-only";
+            label.textContent = index === 0
+                ? group.address + ": " + group.total + (group.total === 1 ? " report" : " reports")
+                : "";
+
+            const marker = L.marker([Number(point[0]), Number(point[1])], {
+                icon: L.divIcon({
+                    className: "hm-hotspot",
+                    html: label.outerHTML,
+                    iconSize: [hitSize, hitSize],
+                    iconAnchor: [hitSize / 2, hitSize / 2]
+                }),
+                keyboard: index === 0,
+                riseOnHover: true
             })
-            // Click / tap / Enter: list every report counted in this hotspot.
-            .on("click", () => window.csOpenPlaceReports && window.csOpenPlaceReports(group.index))
-            .addTo(map);
+                .bindTooltip(addHint(groupTooltip(group)), {
+                    direction: "top",
+                    offset: [0, -hitSize / 2 + 8],
+                    opacity: 1,
+                    className: "hm-tip-wrap"
+                })
+                .addTo(map);
+
+            marker._csGroup = group.index;
+            marker.on("tooltipopen", (event) => placeTooltip(marker, event.tooltip));
+
+            marker.on("click", () => {
+                // Touch: the first tap on a group only shows the numbers; a second
+                // tap anywhere on the same group (its spots can overlap) opens the list.
+                if (isTouch && (!tappedMarker || tappedMarker._csGroup !== group.index)) {
+                    if (tappedMarker) tappedMarker.closeTooltip();
+                    tappedMarker = marker;
+                    marker.openTooltip();
+                    return;
+                }
+                tappedMarker = null;
+                marker.closeTooltip();
+                if (window.csOpenPlaceReports) window.csOpenPlaceReports(group.index);
+            });
+            // (No reset on "tooltipclose": on touch screens Leaflet closes and
+            // reopens the tooltip during the second tap, just before "click".)
+        });
+    });
+
+    // Tapping empty map closes an open tooltip.
+    map.on("click", () => {
+        if (tappedMarker) tappedMarker.closeTooltip();
+        tappedMarker = null;
     });
 
     if (heatPoints.length > 0) {
