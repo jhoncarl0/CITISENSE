@@ -98,6 +98,58 @@
     grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
+/*
+ * Report summary cards. Each card is a size container: its contents follow
+ * the CARD's width, not the screen's.
+ *   - narrow card  -> icon above, number and label below, all centred;
+ *   - wider card   -> icon beside the number and label, as one centred row
+ *                     (e.g. "Total Reports" stretched over two columns).
+ */
+.dash-stats .dash-stat {
+    container-type: inline-size;
+    display: flex;
+    align-items: stretch;
+    min-width: 0;
+    padding: 18px 16px;
+}
+
+.dash-stat-inner {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.dash-stat-text {
+    min-width: 0;
+}
+
+.dash-stat .cs-stat-value,
+.dash-stat .cs-stat-label {
+    overflow-wrap: anywhere;
+}
+
+.dash-stat .cs-icon-circle {
+    flex-shrink: 0;
+}
+
+@container (max-width: 199px) {
+    .dash-stat-inner {
+        flex-direction: column;
+        justify-content: center;
+        gap: 10px;
+        text-align: center;
+    }
+}
+
+@container (min-width: 320px) {
+    .dash-stat-inner {
+        justify-content: center;
+        gap: 18px;
+    }
+}
+
 .dash-grid {
     display: grid;
     grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
@@ -252,11 +304,22 @@
 
 /* Responsive --------------------------------------------------------------- */
 
-@media (max-width: 1280px) {
+@media (max-width: 1024px) {
+    /* Two wide cards, then three: no lonely card on its own row. */
     .dash-stats {
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        grid-template-columns: repeat(6, minmax(0, 1fr));
     }
 
+    .dash-stats .dash-stat {
+        grid-column: span 2;
+    }
+
+    .dash-stats .dash-stat:nth-child(-n + 2) {
+        grid-column: span 3;
+    }
+}
+
+@media (max-width: 1280px) {
     .dash-grid {
         grid-template-columns: 1fr;
     }
@@ -294,12 +357,34 @@
         font-size: 18px;
     }
 
+    /* Phones: "Total Reports" across the top, then two by two. */
     .dash-stats {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .dash-stats .cs-stat:first-child {
+    .dash-stats .dash-stat,
+    .dash-stats .dash-stat:nth-child(-n + 2) {
+        grid-column: span 1;
+    }
+
+    .dash-stats .dash-stat:first-child {
         grid-column: span 2;
+    }
+
+    /* Undo the general phone rule for stat tiles (column, left-aligned):
+       the inner box decides the layout from the card's width. */
+    .dash-stats .dash-stat {
+        flex-direction: row;
+        align-items: stretch;
+        padding: 16px 12px;
+    }
+
+    .dash-stat .cs-stat-value {
+        font-size: 26px;
+    }
+
+    .dash-stat .cs-stat-label {
+        font-size: 15px;
     }
 
     .dash-cta {

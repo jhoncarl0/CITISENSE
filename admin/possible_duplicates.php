@@ -28,7 +28,7 @@ foreach ($groups as $group) {
 }
 
 $pageTitle = "Possible Duplicates";
-$pageStyles = ["duplicates.css"];
+$pageStyles = ["duplicates.css", "reports.css"];
 include __DIR__ . "/partial/head.php";
 
 /** One report row inside a group. */
@@ -51,7 +51,11 @@ function dupReportRow(array $report, bool $isMain, string $groupID, string $main
         <div class="dup-info">
             <div class="dup-title-row">
                 <?php if ($isMain): ?>
-                    <span class="dup-main-tag"><i class="bi bi-star-fill" aria-hidden="true"></i> Suggested main report</span>
+                    <?php if (($report["linkedCount"] ?? 0) > 0 && $report["statusID"] !== "STAT001"): ?>
+                        <span class="dup-main-tag"><i class="bi bi-star-fill" aria-hidden="true"></i> Main report · <?= (int) $report["linkedCount"] ?> confirmed <?= (int) $report["linkedCount"] === 1 ? "duplicate" : "duplicates" ?></span>
+                    <?php else: ?>
+                        <span class="dup-main-tag"><i class="bi bi-star-fill" aria-hidden="true"></i> Suggested main report</span>
+                    <?php endif; ?>
                 <?php endif; ?>
                 <h3><?= csEscape($report["categoryName"]) ?></h3>
                 <?= csStatusBadge($report["statusName"]) ?>
@@ -75,17 +79,10 @@ function dupReportRow(array $report, bool $isMain, string $groupID, string $main
                 <p class="dup-description">“<?= csEscape(mb_strimwidth(trim((string) $report["description"]), 0, 180, "…")) ?>”</p>
             <?php endif; ?>
 
-            <?php if ($linkedTo !== ""): ?>
-                <p class="dup-linked-tag">
-                    <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
-                    Marked as duplicate of report <?= csEscape($linkedTo) ?> · follows its status and expected completion date
-                </p>
-            <?php endif; ?>
-
             <?php if ($match): ?>
                 <div class="dup-reasons" aria-label="Why this looks like a duplicate">
                     <span class="dup-confidence is-<?= csEscape(strtolower(str_replace(" ", "-", $match["confidence"]))) ?>">
-                        <?= csEscape($match["confidence"]) ?> duplicate of <?= csEscape($match["other"]) ?>
+                        <?= csEscape($match["confidence"]) ?> · possible duplicate of <?= csEscape($match["other"]) ?>
                     </span>
                     <?php foreach ($match["reasons"] as $reason): ?>
                         <span class="dup-reason"><i class="bi bi-check2" aria-hidden="true"></i><?= csEscape($reason) ?></span>
@@ -105,7 +102,7 @@ function dupReportRow(array $report, bool $isMain, string $groupID, string $main
                     <i class="bi bi-x-circle" aria-hidden="true"></i> Not a Duplicate
                 </button>
             <?php endif; ?>
-            <a class="cs-btn cs-btn-ghost cs-btn-sm" href="<?= csEscape(csUrl("reports.php", ["tab" => "all", "search" => $report["reportID"], "open" => $report["reportID"]])) ?>">
+            <a class="cs-btn cs-btn-ghost cs-btn-sm" <?= csViewReportAttrs($report["reportID"]) ?>>
                 View Report
             </a>
         </div>
@@ -121,7 +118,7 @@ function dupReportRow(array $report, bool $isMain, string $groupID, string $main
 
     <?php $fromReport = preg_match('/^[A-Za-z0-9_-]{1,50}$/', (string) ($_GET["from"] ?? "")) ? (string) $_GET["from"] : ""; ?>
     <?php if ($fromReport !== ""): ?>
-        <a class="cs-btn cs-btn-ghost cs-btn-sm dup-back" href="<?= csEscape(csUrl("reports.php", ["tab" => "all", "search" => $fromReport, "open" => $fromReport])) ?>">
+        <a class="cs-btn cs-btn-ghost cs-btn-sm dup-back" href="<?= csEscape(csUrl("reports.php", ["open" => $fromReport])) ?>">
             <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to report <?= csEscape($fromReport) ?>
         </a>
     <?php endif; ?>
@@ -171,25 +168,6 @@ function dupReportRow(array $report, bool $isMain, string $groupID, string $main
                             <p>Keep the main report and mark the others as duplicates (they follow its status), or mark any report that is different as “Not a Duplicate”.</p>
                         </div>
                     </header>
-                    <?php
-                    $groupMain = $group["main"];
-                    $markedCount = (int) ($groupMain["linkedCount"] ?? 0);
-                    $mainAccepted = in_array($groupMain["statusID"], ["STAT002", "STAT004"], true);
-                    ?>
-                    <?php if ($markedCount > 0): ?>
-                        <div class="dup-next-step">
-                            <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
-                            <p>
-                                <?= $markedCount ?> <?= $markedCount === 1 ? "report is marked as a duplicate" : "reports are marked as duplicates" ?> of report <?= csEscape($groupMain["reportID"]) ?>.
-                                <strong>Next:</strong>
-                                <?= $mainAccepted ? "set the expected completion date of report " : "accept report " ?><?= csEscape($groupMain["reportID"]) ?><?= $mainAccepted ? "" : " and set its expected completion date" ?>.
-                                This group then leaves this page; the duplicates keep following report <?= csEscape($groupMain["reportID"]) ?>.
-                            </p>
-                            <a class="cs-btn cs-btn-primary cs-btn-sm" href="<?= csEscape(csUrl("reports.php", ["tab" => "all", "search" => $groupMain["reportID"], "open" => $groupMain["reportID"]])) ?>">
-                                Open report <?= csEscape($groupMain["reportID"]) ?>
-                            </a>
-                        </div>
-                    <?php endif; ?>
                     <ul class="dup-list">
                         <?php dupReportRow($group["main"], true, $group["id"], $group["main"]["reportID"]); ?>
                         <?php foreach ($group["members"] as $member): ?>
@@ -243,8 +221,11 @@ function dupReportRow(array $report, bool $isMain, string $groupID, string $main
 
 <script type="application/json" id="duplicateGroups"><?= json_encode($groupPayload, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: "{}" ?></script>
 
+<?php include __DIR__ . "/partial/report_drawer.php"; ?>
+
 <?php include __DIR__ . "/partial/scripts.php"; ?>
-<script src="../js/duplicates.js?v=<?= $csAssetVersion ?>"></script>
+<?php include __DIR__ . "/partial/report_drawer_scripts.php"; ?>
+<script src="../js/duplicates.js?v=<?= $csAssetVersion ?>.1"></script>
 
 </body>
 </html>

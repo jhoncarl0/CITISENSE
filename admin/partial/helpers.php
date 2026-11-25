@@ -4,6 +4,8 @@
  * Loaded by partial/head.php; safe to include more than once.
  */
 
+require_once __DIR__ . "/../../config/timezone.php";
+
 /*
  * WHERE THE MOBILE APP'S PHOTOS ARE
  * ---------------------------------------------------------------
@@ -244,31 +246,47 @@ if (!function_exists("csEscape")) {
             . '</span>';
     }
 
-    /** Format a database date/time, or return $fallback. */
+    /**
+     * Format a STORED database date/time for display, or return $fallback.
+     * The value is read in the storage timezone (CS_DB_TIMEZONE, UTC) and
+     * shown in the display timezone (Asia/Manila), see config/timezone.php.
+     * Date-only values ("2026-11-25") are calendar days and are not shifted.
+     */
     function csDate($value, string $format = "M j, Y", string $fallback = ""): string
     {
         if (!$value) {
             return $fallback;
         }
 
-        $stamp = strtotime((string) $value);
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', trim((string) $value))) {
+            $stamp = strtotime((string) $value);
+            return $stamp === false ? $fallback : date($format, $stamp);
+        }
 
-        return $stamp === false ? $fallback : date($format, $stamp);
+        $date = csFromDb($value);
+
+        return $date === null ? $fallback : $date->format($format);
     }
 
-    /** "3 hours ago" style relative time for recent dates. */
+    /** "3 hours ago" style relative time for a STORED database date/time. */
     function csTimeAgo($value): string
     {
-        $stamp = $value ? strtotime((string) $value) : false;
+        $date = csFromDb($value);
 
-        if ($stamp === false) {
+        if ($date === null) {
             return "";
         }
 
+        $stamp = $date->getTimestamp();
         $seconds = time() - $stamp;
 
+        // A few minutes ahead (clocks of two servers) still counts as "just now".
+        if ($seconds < 0 && $seconds > -300) {
+            $seconds = 0;
+        }
+
         if ($seconds < 0) {
-            return date("M j, Y", $stamp);
+            return $date->format("M j, Y · g:i A");
         }
 
         if ($seconds < 60) {
@@ -287,7 +305,19 @@ if (!function_exists("csEscape")) {
             return $d . ($d === 1 ? " day ago" : " days ago");
         }
 
-        return date("M j, Y", $stamp);
+        return $date->format("M j, Y");
+    }
+
+    /**
+     * Attributes for a "View Report" link: opens the report's details panel
+     * in place (partial/report_drawer.php + js/reports.js). The href is only
+     * the fallback (new tab / no JavaScript) and keeps the Reports page on its
+     * normal tab instead of jumping to "All".
+     */
+    function csViewReportAttrs($reportID): string
+    {
+        $id = (string) $reportID;
+        return 'href="' . csEscape("reports.php?open=" . rawurlencode($id)) . '" data-view="' . csEscape($id) . '"';
     }
 
     /** Build a URL to $page keeping the given query values (empty ones dropped). */

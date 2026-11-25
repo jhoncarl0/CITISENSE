@@ -171,7 +171,7 @@ function statusRecordChange(
     ?string $remarks
 ): void {
     $historyID = "H" . bin2hex(random_bytes(16));
-    $dateChanged = date("Y-m-d H:i:s");
+    $dateChanged = csDbNow();
 
     $stmt = $conn->prepare(
         "INSERT INTO reporthistory

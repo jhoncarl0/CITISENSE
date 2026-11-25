@@ -414,10 +414,8 @@ $profilePicUrl = $profilePic !== ""
     ? csMediaUrl($profilePic)
     : "";
 
-$dateJoined = !empty($admin["dateJoined"])
-    ? date("F j, Y", strtotime($admin["dateJoined"]))
-    : "Not available";
 require_once __DIR__ . "/partial/helpers.php";
+$dateJoined = csDate($admin["dateJoined"] ?? "", "F j, Y", "Not available");
 
 $pageTitle = "Settings";
 $pageStyles = ["settings.css"];

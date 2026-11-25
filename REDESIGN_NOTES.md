@@ -346,3 +346,81 @@ optional comment (table `report_feedback`, written by the mobile API). The admin
   "Resident feedback" section with the answer, stars and comment.
 * "Not fixed" answers also appear in Messages, as before (the app adds them to the report's conversation).
 * No database change; works (shows "No feedback yet") before the table exists.
+
+## Fixes and improvements (25 Nov 2026)
+
+### View Report opens the report where you are
+* **View / View Report** on Possible Duplicates, Resident Feedback, Issue Map, Dashboard and Messages now
+  opens the report's details panel **on that page**. It no longer jumps to the Reports page or to its
+  **All** tab. On the Reports page, opening a report never changes the tab, filters or page number.
+* Reports that are not on the current page are loaded from the new **`admin/report_details.php`**
+  (JSON, only the admin's own barangay). The panel and its dialogs (Accept, Reject, Resolve, Change
+  Status) are shared: `admin/partial/report_drawer.php`, data from `admin/partial/report_details.php`,
+  behaviour in `js/reports.js` (any element with `data-view="REPORTID"`).
+* The open report is kept in the address (`?open=REP001`): a refresh, or the reload after an action,
+  shows the same report on the same page. Old links such as `reports.php?open=REP001` still work.
+
+### Duplicates: only confirmed ones are "Duplicate of …"
+* **Possible Duplicates**: after **Mark as Duplicate** the report leaves the page at once (no more
+  "Marked as duplicate of …" line or "Open report" note). The link to its main report stays in
+  `duplicate_reviews` (`decision = 'linked'`).
+* **Reports page**: confirmed duplicates are no longer separate entries (in any tab, and not counted
+  in the tab numbers). They are listed in **View** of their main report under "Confirmed duplicate
+  reports". Searching for a duplicate's ID shows its main report.
+* Labels: **Suggested main report** (has confirmed duplicates but is not accepted yet, or is the
+  suggested main report of a possible-duplicate group) and **Main report** (accepted). The suggestion
+  check says "Possible duplicate of … · not confirmed" with a Review link.
+* "Duplicate of report …" appears **only** for reports an administrator marked. The older automatic
+  grouping (same issue type at the same saved location) now says "Same place and type of issue as
+  report …" instead of "Same problem as …".
+
+### Dates and times
+* One rule for the whole admin site (`config/timezone.php`, loaded by `config/database.php`):
+  dates are **stored in UTC** and **shown in Philippine time (Asia/Manila)**.
+  * The MySQL connection uses the storage timezone (`SET time_zone`), so `NOW()` and `TIMESTAMP`
+    columns agree with PHP.
+  * Everything the admin site saves uses `csDbNow()` / `csToDb()`; everything it shows goes through
+    `csDate()` / `csTimeAgo()`, which convert to Philippine time. "4 hours ago" and the clock time now
+    match, and refreshing never changes them.
+  * The expected completion date the admin picks (Philippine time) is saved in UTC; the Reports date
+    filters, Analytics (grouping by day) and the downloaded summary use Philippine calendar days.
+* Optional environment variables: `CS_DB_TIMEZONE` (default `UTC`) and `CS_DISPLAY_TIMEZONE`
+  (default `Asia/Manila`). **The mobile API must save dates in the same timezone.** If it saves
+  Philippine time instead, set `CS_DB_TIMEZONE=Asia/Manila`. **Database Check** (`admin/db_check.php`)
+  now shows both clocks and the newest report's stored/shown time, and warns when reports appear to be
+  in the future.
+* Expected completion dates saved **before** this change were stored as Philippine time; open
+  reports may show them 8 hours later until the date is saved again.
+
+### Issue Map
+* A place's **View** now opens a list of **every** report counted in its pin (all places within 60 m),
+  with All / Open only, and each report opens in place. Clicking a hotspot on the map opens the same
+  list. Before, View searched the Reports page for one address only, so most reports were missing.
+* "Open" means Pending, In Progress or Overdue (Rejected reports are no longer counted as open). The
+  pin, the list and the View panel use the same report IDs, so the numbers always match.
+* The sidebar menu is no longer covered by the map: every map gets its own stacking context
+  (`isolation: isolate`), so Leaflet's layers (z-index 400–1000) stay inside the map.
+
+### Administrator email
+* No admin email is hard-coded in this website: it is the login email stored in `users`. Run
+  `database/update_admin_email_2026_11.sql` once to change `07dablo.christille@gmail.com` to
+  `brgyduljo.fatima@gmail.com` (only that admin account). If the **mobile API's** mail settings
+  (sender / SMTP user on Railway) use the old address, change them there too.
+
+### Layout
+* **Dropdowns**: every `select.cs-select` becomes the same custom dropdown on every device (iPhone
+  included): `CitiSense.enhanceSelect()` in `js/citisense.js`. The real `<select>` stays underneath,
+  so forms, `required`, `select.value` and `change` events keep working. Keyboard: arrows, Home/End,
+  Enter, Esc, type to jump. The list opens upward when there is no room below and is never cut off
+  by a dialog. Add `data-native` to a select to keep the browser's own picker.
+* **No overflow**: long words (emails, addresses, IDs) wrap inside cards, dialogs and the details
+  panel; wide tables scroll inside their card; buttons wrap on phones. The Reports tabs show as a
+  3 × 2 grid on phones, and on tablets the chosen tab is scrolled into view.
+* **Login on phones and tablets** keeps the desktop design: the blue brand panel (clouds, skyline,
+  badge, tagline) becomes a header and the form sits in a white card over it. It fits a 390 × 844
+  phone without scrolling. The forgot-password page uses the same layout.
+* **Dashboard › Report summary**: each card lays out by its own width (CSS container query). Narrow
+  cards: icon, number and label stacked and centred. Wide cards: one centred row. Phones: Total
+  Reports across the top, then two by two. Tablets: two wide cards, then three.
+
+No database table or column was changed.

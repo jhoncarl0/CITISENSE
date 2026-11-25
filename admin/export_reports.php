@@ -32,7 +32,8 @@ require_once __DIR__ . '/../config/database.php';
 
 
 
-date_default_timezone_set('Asia/Manila');
+// Philippine time (config/timezone.php); stored dates are converted below.
+date_default_timezone_set(CS_DISPLAY_TIMEZONE);
 
 
 
@@ -128,9 +129,10 @@ switch ($period) {
 
 
 
-$startDate = $start->format('Y-m-d H:i:s');
+// The period is in Philippine time; report dates are stored in the database timezone.
+$startDate = $start->setTimezone(csDbTimezone())->format('Y-m-d H:i:s');
 
-$endDateString = $endDate->format('Y-m-d H:i:s');
+$endDateString = $endDate->setTimezone(csDbTimezone())->format('Y-m-d H:i:s');
 
 
 
@@ -588,6 +590,13 @@ $stmt->bind_param(
 $stmt->execute();
 
 $detailedReports = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+// Show each submission time in Philippine time.
+foreach ($detailedReports as &$detailedReport) {
+    $local = csFromDb($detailedReport['dateReported'] ?? '');
+    $detailedReport['dateReported'] = $local ? $local->format('Y-m-d H:i:s') : (string) ($detailedReport['dateReported'] ?? '');
+}
+unset($detailedReport);
 
 $stmt->close();
 

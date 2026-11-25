@@ -276,7 +276,8 @@ if (!$validDate) {
     ]);
 }
 
-$mysqlTimeline = $date->format("Y-m-d H:i:s");
+// The admin picks Philippine time; it is stored in the database timezone (UTC).
+$mysqlTimeline = $date->setTimezone(csDbTimezone())->format("Y-m-d H:i:s");
 $transactionStarted = false;
 
 try {
@@ -437,7 +438,8 @@ try {
         $acceptedAt = (string) $original["dateReported"];
     }
 
-    $earliestDay = (new DateTimeImmutable($acceptedAt))->setTime(0, 0);
+    // Stored time -> the Philippine calendar day it falls on.
+    $earliestDay = (csFromDb($acceptedAt) ?? new DateTimeImmutable("now"))->setTime(0, 0);
 
     if ($date < $earliestDay) {
         timelineFail(

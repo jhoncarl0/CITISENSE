@@ -193,6 +193,14 @@ function heatmapDistanceMeters(float $lat1, float $lng1, float $lat2, float $lng
     return 2 * $r * asin(min(1, sqrt($a)));
 }
 
+/*
+ * "Open" = still being handled: Pending, In Progress or Overdue.
+ * Resolved and Rejected reports are counted in the total but not as open.
+ * The pin, the list and the View panel all use these same report IDs, so the
+ * counts always match the reports shown when View is clicked.
+ */
+$openStatusIDs = ["STAT001", "STAT002", "STAT004"];
+
 /* One entry per saved location. */
 $places = [];
 foreach ($reports as $report) {
@@ -205,10 +213,12 @@ foreach ($reports as $report) {
             "total" => 0,
             "open" => 0,
             "categories" => [],
+            "reportIDs" => [],
         ];
     }
     $places[$key]["total"]++;
-    if ($report["statusID"] !== "STAT003") {
+    $places[$key]["reportIDs"][] = (string) $report["reportID"];
+    if (in_array((string) $report["statusID"], $openStatusIDs, true)) {
         $places[$key]["open"]++;
     }
     $category = (string) ($report["categoryName"] ?: "Other");
@@ -240,12 +250,13 @@ $groups = [];
 foreach ($places as $key => $place) {
     $root = $findRoot((string) $key);
     if (!isset($groups[$root])) {
-        $groups[$root] = ["places" => [], "total" => 0, "open" => 0, "categories" => [], "latSum" => 0.0, "lngSum" => 0.0];
+        $groups[$root] = ["places" => [], "total" => 0, "open" => 0, "categories" => [], "reportIDs" => [], "latSum" => 0.0, "lngSum" => 0.0];
     }
     $group = &$groups[$root];
     $group["places"][] = $place;
     $group["total"] += $place["total"];
     $group["open"] += $place["open"];
+    array_push($group["reportIDs"], ...$place["reportIDs"]);
     $group["latSum"] += $place["lat"] * $place["total"];
     $group["lngSum"] += $place["lng"] * $place["total"];
     foreach ($place["categories"] as $category => $count) {
@@ -254,22 +265,60 @@ foreach ($places as $key => $place) {
     unset($group);
 }
 
+require_once __DIR__ . "/partial/helpers.php";
+require_once __DIR__ . "/partial/duplicate_links.php";
+
+/* Confirmed duplicates are real reports at that place: counted and listed, and labelled. */
+$linkMap = csDuplicateLinkMap($conn, (string) $barangayID);
+
+$reportsByID = [];
+foreach ($reports as $report) {
+    $reportsByID[(string) $report["reportID"]] = $report;
+}
+
 $mapGroups = [];
 foreach ($groups as $group) {
     // Named after its place with the most reports.
     usort($group["places"], static fn($x, $y) => $y["total"] <=> $x["total"]);
     arsort($group["categories"]);
+
+    // Every report counted in this group, newest first (the View list).
+    $groupReports = [];
+    foreach ($group["reportIDs"] as $id) {
+        $row = $reportsByID[$id];
+        $groupReports[] = [
+            "id" => $id,
+            "category" => (string) $row["categoryName"],
+            "status" => (string) $row["statusName"],
+            "open" => in_array((string) $row["statusID"], $openStatusIDs, true),
+            "address" => (string) ($row["address"] ?: "Unnamed location"),
+            "date" => csDate($row["dateReported"], "M j, Y · g:i A"),
+            "sort" => (string) $row["dateReported"],
+            "linkedTo" => $linkMap[$id] ?? "",
+        ];
+    }
+    usort($groupReports, static fn($x, $y) => [$y["sort"], $y["id"]] <=> [$x["sort"], $x["id"]]);
+    foreach ($groupReports as &$item) {
+        unset($item["sort"]);
+    }
+    unset($item);
+
     $mapGroups[] = [
         "address" => $group["places"][0]["address"],
         "nearby" => count($group["places"]) - 1,
-        "total" => $group["total"],
-        "open" => $group["open"],
+        "total" => count($groupReports),
+        "open" => count(array_filter($groupReports, static fn($r) => $r["open"])),
         "categories" => $group["categories"],
+        "reports" => $groupReports,
         "lat" => $group["latSum"] / max(1, $group["total"]),
         "lng" => $group["lngSum"] / max(1, $group["total"]),
     ];
 }
 usort($mapGroups, static fn($x, $y) => $y["total"] <=> $x["total"]);
+foreach ($mapGroups as $index => &$mapGroup) {
+    $mapGroup["index"] = $index;
+}
+unset($mapGroup);
 
 $groupsJSON = json_encode(
     $mapGroups,
@@ -280,12 +329,10 @@ $groupsJSON = json_encode(
 // PLACES WITH THE MOST REPORTS (text summary of the map, same groups as the pins)
 // ==========================================
 
-$topPlaces = array_slice($mapGroups, 0, 6);
-
-require_once __DIR__ . "/partial/helpers.php";
+$topPlaces = array_slice($mapGroups, 0, 8);
 
 $pageTitle = "Issue Map";
-$pageStyles = ["heatmap.css"];
+$pageStyles = ["heatmap.css", "reports.css"];
 $pageHead = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">';
 include __DIR__ . "/partial/head.php";
 ?>
@@ -340,7 +387,7 @@ include __DIR__ . "/partial/head.php";
             <div class="cs-card-header">
                 <div>
                     <h2 id="placesHeading">Places with the most reports</h2>
-                    <p>Open = not yet resolved.</p>
+                    <p>Open = Pending, In Progress or Overdue. Places within 60 m are counted together. View lists every report counted.</p>
                 </div>
             </div>
 
@@ -363,7 +410,7 @@ include __DIR__ . "/partial/head.php";
                                     <?php endif; ?>
                                 </span>
                             </span>
-                            <a class="cs-btn cs-btn-ghost cs-btn-sm" href="<?= csEscape(csUrl("reports.php", ["search" => $place["address"]])) ?>" aria-label="View reports at <?= csEscape($place["address"]) ?>">View</a>
+                            <button type="button" class="cs-btn cs-btn-ghost cs-btn-sm" data-place="<?= (int) $place["index"] ?>" aria-label="View the <?= (int) $place["total"] ?> reports at <?= csEscape($place["address"]) ?>">View</button>
                         </li>
                     <?php endforeach; ?>
                 </ol>
@@ -380,10 +427,33 @@ include __DIR__ . "/partial/head.php";
     <?php include __DIR__ . "/partial/footer.php"; ?>
 </main>
 
+<!-- REPORTS AT A PLACE (same reports as the counts) -->
+<div class="cs-modal" id="placeReportsModal" role="dialog" aria-modal="true" aria-labelledby="placeReportsTitle">
+    <div class="cs-modal-dialog hm-place-dialog">
+        <div class="cs-modal-header">
+            <div>
+                <h2 id="placeReportsTitle">Reports at this place</h2>
+                <p id="placeReportsSummary"></p>
+            </div>
+            <button type="button" class="cs-icon-btn" data-modal-close aria-label="Close"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+        </div>
+        <div class="cs-modal-body">
+            <div class="hm-place-filters" role="group" aria-label="Show">
+                <button type="button" class="hm-place-filter is-active" data-place-filter="all" aria-pressed="true">All</button>
+                <button type="button" class="hm-place-filter" data-place-filter="open" aria-pressed="false">Open only</button>
+            </div>
+            <ul class="hm-place-reports" id="placeReportsList"></ul>
+        </div>
+    </div>
+</div>
+
+<?php include __DIR__ . "/partial/report_drawer.php"; ?>
+
 <?php include __DIR__ . "/partial/scripts.php"; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<?php $csLeafletLoaded = true; include __DIR__ . "/partial/report_drawer_scripts.php"; ?>
 <script>
 (function () {
     const reports = <?= $reportsJSON ?: "[]" ?>;
@@ -512,12 +582,124 @@ include __DIR__ . "/partial/head.php";
                 opacity: 1,
                 className: "hm-tip-wrap"
             })
-            .on("click", function () { this.openTooltip(); })
+            // Click / tap / Enter: list every report counted in this hotspot.
+            .on("click", () => window.csOpenPlaceReports && window.csOpenPlaceReports(group.index))
             .addTo(map);
     });
 
     if (heatPoints.length > 0) {
         map.fitBounds(L.latLngBounds(heatPoints.map((p) => [p[0], p[1]])).pad(0.15));
+    }
+})();
+</script>
+<script>
+/* The "View" panel: lists exactly the reports counted for a place (pin and
+   list use the same server-side groups). Each report opens in the details
+   panel on this page (data-view, js/reports.js), so the map stays here. */
+(function () {
+    const CS = window.CitiSense;
+    const groups = <?= $groupsJSON ?: "[]" ?>;
+    const list = document.getElementById("placeReportsList");
+    const title = document.getElementById("placeReportsTitle");
+    const summary = document.getElementById("placeReportsSummary");
+    const filters = document.querySelectorAll("[data-place-filter]");
+    let current = null;
+    let filter = "all";
+
+    const slug = (text) => String(text).toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const icons = {
+        pending: "bi-hourglass-split", "in-progress": "bi-tools", resolved: "bi-check-circle-fill",
+        overdue: "bi-exclamation-triangle-fill", rejected: "bi-x-circle-fill"
+    };
+
+    function node(tag, className, text) {
+        const element = document.createElement(tag);
+        if (className) element.className = className;
+        if (text !== undefined) element.textContent = text;
+        return element;
+    }
+
+    function render() {
+        if (!current) return;
+        const shown = current.reports.filter((report) => filter === "all" || report.open);
+        list.replaceChildren(...shown.map((report) => {
+            const item = node("li", "hm-place-report");
+            const text = node("div", "hm-place-report-text");
+            const head = node("div", "hm-place-report-head");
+            head.append(node("strong", "", report.id + " · " + report.category));
+            const statusSlug = slug(report.status);
+            const badge = node("span", "cs-badge has-icon cs-badge-" + (icons[statusSlug] ? statusSlug : "neutral"));
+            const badgeIcon = node("i", "bi " + (icons[statusSlug] || "bi-circle"));
+            badgeIcon.setAttribute("aria-hidden", "true");
+            badge.append(badgeIcon, report.status);
+            head.append(badge);
+            text.append(head, node("span", "", report.date), node("span", "hm-place-report-address", report.address));
+            if (report.linkedTo) {
+                text.append(node("span", "hm-place-report-dup", "Confirmed duplicate of report " + report.linkedTo));
+            }
+            const view = node("button", "cs-btn cs-btn-ghost cs-btn-sm", "View");
+            view.type = "button";
+            view.dataset.view = report.id;
+            view.setAttribute("aria-label", "View report " + report.id);
+            item.append(text, view);
+            return item;
+        }));
+        if (!shown.length) {
+            list.replaceChildren(node("li", "hm-place-empty", "No open reports here. Choose All to see every report."));
+        }
+    }
+
+    function open(index) {
+        current = groups.find((group) => group.index === Number(index)) || null;
+        if (!current) return;
+        filter = "all";
+        filters.forEach((button) => {
+            const on = button.dataset.placeFilter === "all";
+            button.classList.toggle("is-active", on);
+            button.setAttribute("aria-pressed", on ? "true" : "false");
+        });
+        title.textContent = current.address;
+        summary.textContent = current.total + (current.total === 1 ? " report" : " reports") + " · " +
+            current.open + " open" +
+            (current.nearby > 0 ? " · includes " + current.nearby + " nearby " + (current.nearby === 1 ? "place" : "places") + " within 60 m" : "");
+        render();
+        CS.openModal("placeReportsModal");
+    }
+    window.csOpenPlaceReports = open;
+
+    filters.forEach((button) => button.addEventListener("click", () => {
+        filter = button.dataset.placeFilter;
+        filters.forEach((other) => {
+            const on = other === button;
+            other.classList.toggle("is-active", on);
+            other.setAttribute("aria-pressed", on ? "true" : "false");
+        });
+        render();
+    }));
+
+    document.addEventListener("click", (event) => {
+        if (!(event.target instanceof Element)) return;
+        const trigger = event.target.closest("[data-place]");
+        if (trigger) open(trigger.dataset.place);
+
+        // A report opened from this list: hide the list while the report is
+        // shown, and bring the list back when the report is closed.
+        const view = event.target.closest("#placeReportsList [data-view]");
+        if (view) {
+            returnToList = true;
+            CS.closeModal("placeReportsModal");
+        }
+    });
+
+    let returnToList = false;
+    const drawer = document.getElementById("reportDrawer");
+    if (drawer) {
+        new MutationObserver(() => {
+            if (returnToList && !drawer.classList.contains("is-open")) {
+                returnToList = false;
+                CS.openModal("placeReportsModal");
+            }
+        }).observe(drawer, { attributes: true, attributeFilter: ["class"] });
     }
 })();
 </script>

@@ -164,7 +164,7 @@ if (!function_exists("csFindDuplicatePairs")) {
         }
 
         try {
-            $now = date("Y-m-d H:i:s");
+            $now = csDbNow();
             $stmt = $conn->prepare("DELETE FROM report_image_hashes WHERE imagePath = ?");
             $stmt->bind_param("s", $relativePath);
             $stmt->execute();
@@ -262,46 +262,25 @@ if (!function_exists("csFindDuplicatePairs")) {
         }
 
         /*
-         * Reports marked as duplicates stay in their group (shown as "Marked as
-         * duplicate") until the main report is settled: accepted (In Progress or
-         * Overdue) WITH an expected completion date. Then they leave this page.
-         * A main report that is no longer open (resolved/rejected) is settled too.
+         * Reports the admin already marked as duplicates ("linked") are
+         * confirmed, not possible duplicates any more: they leave this page
+         * at once and are reached through their main report's View. The link
+         * itself stays in duplicate_reviews (decision = 'linked').
+         * The main report keeps being compared with other open reports.
          */
-        $byID = [];
-        foreach ($reports as $report) {
-            $byID[(string) $report["reportID"]] = $report;
-        }
-        $isSettled = static function (string $mainID) use ($byID): bool {
-            if (!isset($byID[$mainID])) {
-                return true;
-            }
-            $main = $byID[$mainID];
-            $timeline = (string) ($main["timeline"] ?? "");
-            return in_array((string) $main["statusID"], ["STAT002", "STAT004"], true)
-                && $timeline !== ""
-                && strtotime($timeline) !== strtotime((string) $main["dateReported"]);
-        };
-
-        $openLinks = [];
-        foreach ($links as $dupID => $mainID) {
-            if (!$isSettled($mainID)) {
-                $openLinks[$dupID] = $mainID;
-            }
-        }
-
         $reports = array_values(array_filter(
             $reports,
-            static fn($report) => !isset($links[(string) $report["reportID"]]) || isset($openLinks[(string) $report["reportID"]])
+            static fn($report) => !isset($links[(string) $report["reportID"]])
         ));
         if (count($reports) < 2) {
             return [];
         }
 
-        $mainsWaiting = array_count_values($openLinks);
+        $mainsLinked = array_count_values($links);
         foreach ($reports as &$report) {
             $id = (string) $report["reportID"];
-            $report["linkedTo"] = $openLinks[$id] ?? "";
-            $report["linkedCount"] = $mainsWaiting[$id] ?? 0;
+            $report["linkedTo"] = "";
+            $report["linkedCount"] = $mainsLinked[$id] ?? 0;
         }
         unset($report);
 

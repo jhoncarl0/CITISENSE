@@ -154,39 +154,179 @@
     margin-top: 2px;
 }
 
-/* Tablet and phone: single column, mascot on top like the mobile app */
+/*
+ * Tablet and phone: the same design, re-arranged instead of shrunk.
+ * The blue brand panel becomes a compact header (same gradient, clouds,
+ * skyline and badge) and the form sits in a white card that overlaps it,
+ * like the CitiSense mobile app.
+ */
 
 @media (max-width: 900px) {
+    .login-body {
+        background: var(--cs-bg);
+    }
+
     .login-page {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto 1fr;
+        min-height: 100vh;
+        min-height: 100dvh;
     }
 
     .login-brand {
-        display: none;
+        gap: 10px;
+        padding: 28px 24px 84px;
+        border-radius: 0 0 32px 32px;
+        background:
+            url("images/login-clouds.svg") top center / 140% auto no-repeat,
+            url("images/login-community.svg") bottom center / 160% auto no-repeat,
+            linear-gradient(160deg, #2f6df0 0%, #1d4ed8 100%);
     }
 
-    .login-mascot-small {
-        display: flex;
+    .login-brand .login-mascot-stage {
+        width: 128px;
+    }
+
+    .login-brand .login-mascot-glow {
+        width: 135%;
+    }
+
+    .login-brand .login-mascot-shadow {
+        height: 10px;
+        margin-top: 8px;
+    }
+
+    .login-brand h2 {
+        max-width: 420px;
+        font-size: 26px;
+    }
+
+    .login-brand p {
+        max-width: 420px;
+        font-size: 16px;
+    }
+
+    .login-panel {
+        align-items: flex-start;
+        margin-top: -60px;
+        padding: 0 16px 28px;
     }
 
     .login-card {
+        max-width: 480px;
+        gap: 18px;
+        padding: 28px 24px 24px;
+        border-radius: var(--cs-radius-lg);
+        background: var(--cs-surface);
+        box-shadow: 0 18px 40px rgba(15, 30, 70, 0.14);
+        border: 1px solid var(--cs-border);
+    }
+
+    /* The badge in the header already greets the user. */
+    .login-mascot-small {
+        display: none;
+    }
+
+    .login-card h1 {
+        font-size: 26px;
         text-align: center;
     }
 
-    .login-card .cs-field,
-    .login-help,
+    .login-intro {
+        text-align: center;
+    }
+
+    .login-help {
+        justify-content: center;
+    }
+
     .login-card .cs-alert {
         text-align: left;
     }
 }
 
 @media (max-width: 480px) {
-    .login-card h1 {
-        font-size: 24px;
+    .login-brand {
+        gap: 8px;
+        padding: 18px 18px 68px;
+        border-radius: 0 0 26px 26px;
     }
 
-    .login-mascot {
-        width: 150px;
+    .login-brand .login-mascot-stage {
+        width: 96px;
+    }
+
+    .login-brand h2 {
+        font-size: 22px;
+    }
+
+    .login-brand p {
+        font-size: 15px;
+    }
+
+    .login-panel {
+        margin-top: -52px;
+        padding: 0 12px 12px;
+    }
+
+    .login-card {
+        padding: 24px 18px 20px;
+        gap: 16px;
+    }
+
+    .login-card h1 {
+        font-size: 22px;
+    }
+
+    .login-form {
+        gap: 16px;
+    }
+
+    .login-form .cs-input,
+    .login-submit {
+        min-height: 52px;
+    }
+
+    .login-password .cs-input {
+        padding-right: 92px;
+    }
+}
+
+/* Tall phones have room for a bigger badge and more breathing space. */
+@media (max-width: 480px) and (min-height: 800px) {
+    .login-brand {
+        gap: 12px;
+        padding-top: 32px;
+        padding-bottom: 80px;
+    }
+
+    .login-brand .login-mascot-stage {
+        width: 136px;
+    }
+}
+
+/* Short screens (small phones, landscape): keep the form in view. */
+@media (max-width: 900px) and (max-height: 760px) {
+    .login-brand p {
+        display: none;
+    }
+
+    .login-brand {
+        padding-top: 18px;
+    }
+
+    .login-brand .login-mascot-stage {
+        width: 88px;
+    }
+}
+
+@media (max-width: 360px) {
+    .login-brand h2 {
+        font-size: 20px;
+    }
+
+    .login-intro {
+        font-size: 15px;
     }
 }
 

@@ -74,7 +74,7 @@ function msgAvatar(string $name, string $avatar, string $class = ""): string
 }
 
 $pageTitle = "Messages";
-$pageStyles = ["messages.css"];
+$pageStyles = ["messages.css", "reports.css"];
 include __DIR__ . "/partial/head.php";
 ?>
 <body>
@@ -226,7 +226,7 @@ include __DIR__ . "/partial/head.php";
                             <ul class="msg-profile-reports">
                                 <?php foreach ($conversation["reports"] as $report): ?>
                                     <li>
-                                        <a href="<?= csEscape(csUrl("reports.php", ["tab" => "all", "search" => $report["id"], "open" => $report["id"]])) ?>">
+                                        <a <?= csViewReportAttrs($report["id"]) ?>>
                                             <span class="msg-report-icon"><i class="bi <?= csEscape(csCategoryIcon($report["category"])) ?>" aria-hidden="true"></i></span>
                                             <span class="msg-report-text">
                                                 <strong><?= csEscape($report["id"]) ?> · <?= csEscape($report["category"]) ?></strong>
@@ -282,7 +282,7 @@ include __DIR__ . "/partial/head.php";
                                     <time><?= csEscape(csDate($message["at"], "g:i A")) ?></time>
                                 </span>
                                 <?php if ($message["reportLabel"] !== ""): ?>
-                                    <a class="msg-report-tag" href="<?= csEscape(csUrl("reports.php", ["tab" => "all", "search" => $message["reportID"], "open" => $message["reportID"]])) ?>">
+                                    <a class="msg-report-tag" <?= csViewReportAttrs($message["reportID"]) ?>>
                                         <i class="bi bi-clipboard-check" aria-hidden="true"></i> <?= csEscape($message["reportLabel"]) ?>
                                     </a>
                                 <?php endif; ?>
@@ -351,7 +351,10 @@ include __DIR__ . "/partial/head.php";
     <?php include __DIR__ . "/partial/footer.php"; ?>
 </main>
 
+<?php include __DIR__ . "/partial/report_drawer.php"; ?>
+
 <?php include __DIR__ . "/partial/scripts.php"; ?>
+<?php include __DIR__ . "/partial/report_drawer_scripts.php"; ?>
 <script src="../js/messages.js?v=<?= $csAssetVersion ?>"></script>
 
 </body>

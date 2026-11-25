@@ -133,7 +133,7 @@ try {
     $stmt->close();
 
     $historyID = "H" . bin2hex(random_bytes(16));
-    $dateChanged = date("Y-m-d H:i:s");
+    $dateChanged = csDbNow();
 
     $stmt = $conn->prepare(
         "INSERT INTO reporthistory (historyID, reportID, userID, statusID, remarks, dateChanged)
