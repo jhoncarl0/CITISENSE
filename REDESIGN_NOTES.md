@@ -406,6 +406,10 @@ optional comment (table `report_feedback`, written by the mobile API). The admin
   `database/update_admin_email_2026_11.sql` once to change `07dablo.christille@gmail.com` to
   `brgyduljo.fatima@gmail.com` (only that admin account). If the **mobile API's** mail settings
   (sender / SMTP user on Railway) use the old address, change them there too.
+* The admin's **name** is also only in `users`: run `database/update_admin_name_2026_11.sql` once to
+  change "Christille Dablo" to **Duljo-Fatima Admin** (first name `Duljo-Fatima`, last name `Admin`;
+  only the admin account with that name). Log out and in again to see the new name in the sidebar
+  and the Dashboard greeting.
 
 ### Layout
 * **Dropdowns**: every `select.cs-select` becomes the same custom dropdown on every device (iPhone
