@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . "/timezone.php";
+
 $host = getenv('DB_HOST') ?: 'localhost';
 $username = getenv('DB_USER') ?: 'root';
 $password = getenv('DB_PASSWORD') ?: '';
@@ -20,3 +22,6 @@ if ($conn->connect_error) {
 }
 
 $conn->set_charset("utf8mb4");
+
+// Stored dates use one timezone (UTC by default), see config/timezone.php.
+csApplyDbTimezone($conn);

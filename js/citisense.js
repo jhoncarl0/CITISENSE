@@ -7,6 +7,9 @@
      openModal(idOrElement) / closeModal(idOrElement)
      flashAfterReload(message, type)    show a toast after the page reloads
 
+     enhanceSelect(select)              custom dropdown (done automatically
+                                        for every select.cs-select)
+
    Declarative hooks:
      [data-sidebar-toggle] / [data-sidebar-close]
      [data-modal-open="id"] / [data-modal-close]
@@ -85,7 +88,7 @@
         if (!openModals.includes(modal)) openModals.push(modal);
 
         const focusable = modal.querySelector(
-            "[autofocus], input:not([type=hidden]):not([disabled]), textarea, select, button:not([disabled])"
+            "[autofocus], input:not([type=hidden]):not([disabled]), textarea, select:not([data-cs-enhanced]), button:not([disabled])"
         );
         if (focusable) setTimeout(() => focusable.focus(), 30);
     }
@@ -349,7 +352,318 @@
         });
     }
 
+    /* ------------------------------------------------- custom dropdowns */
+
+    /*
+     * Every <select class="cs-select"> gets the same dropdown on every
+     * device (iPhone, Android, Windows, Mac) instead of the browser's own
+     * picker. The real <select> stays in the page, hidden, and is always
+     * kept in step, so forms submit it, "required" still works, and page
+     * scripts can keep reading/writing select.value, changing its options
+     * or listening for "change". Add data-native to a select to opt out.
+     */
+    const nativeValue = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+    const nativeIndex = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "selectedIndex");
+    let dropdownCount = 0;
+    let openDropdown = null;
+
+    function enhanceSelect(select) {
+        if (!(select instanceof HTMLSelectElement) || select.dataset.csEnhanced || select.multiple ||
+            select.size > 1 || select.hasAttribute("data-native")) return;
+        select.dataset.csEnhanced = "1";
+
+        const uid = "csdd" + (++dropdownCount);
+        const wrap = document.createElement("div");
+        // Layout classes of the select (e.g. widths) move to the wrapper.
+        wrap.className = "cs-dropdown " + Array.from(select.classList).filter((c) => c !== "cs-select").join(" ");
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "cs-select cs-dropdown-button";
+        button.id = uid + "-button";
+        button.setAttribute("aria-haspopup", "listbox");
+        button.setAttribute("aria-expanded", "false");
+        button.setAttribute("aria-controls", uid + "-menu");
+        const buttonText = document.createElement("span");
+        buttonText.className = "cs-dropdown-text";
+        button.appendChild(buttonText);
+
+        const menu = document.createElement("ul");
+        menu.className = "cs-dropdown-menu";
+        menu.id = uid + "-menu";
+        menu.setAttribute("role", "listbox");
+        menu.tabIndex = -1;
+        menu.hidden = true;
+
+        // Name the button after the select's <label> (and keep labels working).
+        const labels = select.id ? document.querySelectorAll('label[for="' + CSS.escape(select.id) + '"]') : [];
+        const labelIDs = [];
+        labels.forEach((label, i) => {
+            if (!label.id) label.id = uid + "-label" + i;
+            labelIDs.push(label.id);
+            label.addEventListener("click", (event) => {
+                event.preventDefault();
+                button.focus();
+            });
+        });
+        if (select.getAttribute("aria-label")) button.setAttribute("aria-label", select.getAttribute("aria-label"));
+        if (labelIDs.length) {
+            button.setAttribute("aria-labelledby", labelIDs.join(" ") + " " + button.id);
+            menu.setAttribute("aria-labelledby", labelIDs.join(" "));
+        }
+
+        select.parentNode.insertBefore(wrap, select);
+        wrap.append(select, button);
+        document.body.appendChild(menu); // fixed position: never cut off by a dialog or card
+        select.classList.add("cs-dropdown-native");
+        select.tabIndex = -1;
+        select.setAttribute("aria-hidden", "true");
+
+        let active = -1;
+        let typed = "";
+        let typedTimer = 0;
+
+        const options = () => Array.from(select.options);
+        const usable = (option) => option && !option.disabled && !option.hidden;
+
+        function render() {
+            const current = select.options[nativeIndex.get.call(select)];
+            buttonText.textContent = current ? current.textContent.trim() : "";
+            wrap.classList.toggle("is-placeholder", !current || current.value === "");
+            button.disabled = select.disabled;
+            wrap.classList.toggle("is-disabled", select.disabled);
+            if (!menu.hidden) build();
+        }
+
+        function build() {
+            const selected = nativeIndex.get.call(select);
+            menu.replaceChildren(...options().map((option, index) => {
+                const item = document.createElement("li");
+                item.id = uid + "-opt" + index;
+                item.className = "cs-dropdown-option";
+                item.setAttribute("role", "option");
+                item.dataset.index = String(index);
+                item.setAttribute("aria-selected", index === selected ? "true" : "false");
+                if (!usable(option)) {
+                    item.setAttribute("aria-disabled", "true");
+                    if (option.hidden) item.hidden = true;
+                }
+                const text = document.createElement("span");
+                text.textContent = option.textContent.trim();
+                const check = document.createElement("i");
+                check.className = "bi bi-check2";
+                check.setAttribute("aria-hidden", "true");
+                item.append(text, check);
+                return item;
+            }));
+            setActive(active);
+        }
+
+        function setActive(index) {
+            active = index;
+            menu.querySelectorAll(".is-active").forEach((item) => item.classList.remove("is-active"));
+            const item = menu.querySelector('[data-index="' + index + '"]');
+            if (item) {
+                item.classList.add("is-active");
+                menu.setAttribute("aria-activedescendant", item.id);
+                const top = item.offsetTop;
+                const bottom = top + item.offsetHeight;
+                if (top < menu.scrollTop) menu.scrollTop = top;
+                else if (bottom > menu.scrollTop + menu.clientHeight) menu.scrollTop = bottom - menu.clientHeight;
+            } else {
+                menu.removeAttribute("aria-activedescendant");
+            }
+        }
+
+        function move(step) {
+            const list = options();
+            let index = active;
+            for (let n = 0; n < list.length; n++) {
+                index = Math.max(0, Math.min(list.length - 1, index + step));
+                if (usable(list[index])) return setActive(index);
+                if ((step < 0 && index === 0) || (step > 0 && index === list.length - 1)) break;
+            }
+        }
+
+        function edge(first) {
+            const list = options();
+            const order = first ? list.map((_, i) => i) : list.map((_, i) => list.length - 1 - i);
+            const found = order.find((i) => usable(list[i]));
+            if (found !== undefined) setActive(found);
+        }
+
+        function place() {
+            const box = button.getBoundingClientRect();
+            const gap = 6;
+            const margin = 8;
+            const below = window.innerHeight - box.bottom - gap - margin;
+            const above = box.top - gap - margin;
+            const wanted = Math.min(menu.scrollHeight || 300, 300);
+            const up = below < Math.min(wanted, 180) && above > below;
+            const width = Math.min(Math.max(box.width, 200), window.innerWidth - margin * 2);
+            const left = Math.min(Math.max(margin, box.left), window.innerWidth - width - margin);
+
+            menu.style.width = width + "px";
+            menu.style.left = left + "px";
+            menu.style.maxHeight = Math.max(120, Math.min(300, up ? above : below)) + "px";
+            if (up) {
+                menu.style.top = "auto";
+                menu.style.bottom = (window.innerHeight - box.top + gap) + "px";
+            } else {
+                menu.style.bottom = "auto";
+                menu.style.top = (box.bottom + gap) + "px";
+            }
+            menu.classList.toggle("is-up", up);
+        }
+
+        function open() {
+            if (select.disabled || !menu.hidden) return;
+            if (openDropdown && openDropdown !== api) openDropdown.close(false);
+            openDropdown = api;
+            active = nativeIndex.get.call(select);
+            menu.hidden = false;
+            build();
+            place();
+            setActive(active < 0 ? -1 : active);
+            if (active < 0) edge(true);
+            wrap.classList.add("is-open");
+            button.setAttribute("aria-expanded", "true");
+            menu.focus({ preventScroll: true });
+        }
+
+        function close(returnFocus) {
+            if (menu.hidden) return;
+            menu.hidden = true;
+            wrap.classList.remove("is-open");
+            button.setAttribute("aria-expanded", "false");
+            if (openDropdown === api) openDropdown = null;
+            if (returnFocus !== false) button.focus({ preventScroll: true });
+        }
+
+        function choose(index) {
+            const option = select.options[index];
+            if (!usable(option)) return;
+            const changed = nativeIndex.get.call(select) !== index;
+            nativeIndex.set.call(select, index);
+            render();
+            close();
+            if (changed) {
+                select.dispatchEvent(new Event("input", { bubbles: true }));
+                select.dispatchEvent(new Event("change", { bubbles: true }));
+            }
+        }
+
+        const api = { close, place, contains: (node) => wrap.contains(node) || menu.contains(node) };
+
+        button.addEventListener("click", () => (menu.hidden ? open() : close()));
+        button.addEventListener("keydown", (event) => {
+            if (["ArrowDown", "ArrowUp", "Enter", " "].includes(event.key)) {
+                event.preventDefault();
+                open();
+            }
+        });
+
+        menu.addEventListener("click", (event) => {
+            const item = event.target instanceof Element && event.target.closest(".cs-dropdown-option");
+            if (item && item.getAttribute("aria-disabled") !== "true") choose(Number(item.dataset.index));
+        });
+        menu.addEventListener("mousemove", (event) => {
+            const item = event.target instanceof Element && event.target.closest(".cs-dropdown-option");
+            if (item && item.getAttribute("aria-disabled") !== "true" && Number(item.dataset.index) !== active) {
+                setActive(Number(item.dataset.index));
+            }
+        });
+        menu.addEventListener("keydown", (event) => {
+            switch (event.key) {
+                case "ArrowDown": event.preventDefault(); move(1); break;
+                case "ArrowUp": event.preventDefault(); move(-1); break;
+                case "Home": event.preventDefault(); edge(true); break;
+                case "End": event.preventDefault(); edge(false); break;
+                case "PageDown": event.preventDefault(); move(8); break;
+                case "PageUp": event.preventDefault(); move(-8); break;
+                case "Enter":
+                case " ":
+                    event.preventDefault();
+                    if (active >= 0) choose(active);
+                    break;
+                case "Escape":
+                    event.preventDefault();
+                    event.stopPropagation(); // do not close the dialog behind it
+                    close();
+                    break;
+                case "Tab":
+                    if (active >= 0) choose(active);
+                    else close();
+                    break;
+                default:
+                    if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                        // Type to jump to an option.
+                        clearTimeout(typedTimer);
+                        typed += event.key.toLowerCase();
+                        typedTimer = setTimeout(() => { typed = ""; }, 700);
+                        const list = options();
+                        const found = list.findIndex((option, i) => usable(option) &&
+                            option.textContent.trim().toLowerCase().startsWith(typed));
+                        if (found > -1) setActive(found);
+                    }
+            }
+        });
+        menu.addEventListener("focusout", (event) => {
+            if (!event.relatedTarget || !api.contains(event.relatedTarget)) close(false);
+        });
+
+        // Focus that lands on the hidden select (labels, scripts) goes to the button.
+        select.addEventListener("focus", () => button.focus());
+        // The browser's "please choose" message for required selects.
+        select.addEventListener("invalid", () => wrap.classList.add("is-invalid"));
+        select.addEventListener("change", () => {
+            wrap.classList.remove("is-invalid");
+            render();
+        });
+
+        // Keep in step when page scripts change the select.
+        Object.defineProperty(select, "value", {
+            configurable: true,
+            get() { return nativeValue.get.call(this); },
+            set(value) { nativeValue.set.call(this, value); render(); }
+        });
+        Object.defineProperty(select, "selectedIndex", {
+            configurable: true,
+            get() { return nativeIndex.get.call(this); },
+            set(value) { nativeIndex.set.call(this, value); render(); }
+        });
+        new MutationObserver(render).observe(select, {
+            childList: true, subtree: true, attributes: true, characterData: true,
+            attributeFilter: ["disabled", "selected", "label", "hidden"]
+        });
+        if (select.form) select.form.addEventListener("reset", () => setTimeout(render, 0));
+
+        render();
+    }
+
+    function enhanceAllSelects(root) {
+        (root || document).querySelectorAll("select.cs-select").forEach(enhanceSelect);
+    }
+
+    // Close an open dropdown when clicking elsewhere, scrolling the page or resizing.
+    document.addEventListener("pointerdown", (event) => {
+        if (openDropdown && !openDropdown.contains(event.target)) openDropdown.close(false);
+    }, true);
+    window.addEventListener("resize", () => openDropdown && openDropdown.close(false));
+    document.addEventListener("scroll", (event) => {
+        if (!openDropdown) return;
+        if (event.target instanceof Element && event.target.classList.contains("cs-dropdown-menu")) return;
+        openDropdown.place();
+    }, true);
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", () => enhanceAllSelects());
+    } else {
+        enhanceAllSelects();
+    }
+
     window.CitiSense = {
+        enhanceSelect,
         lockPageZoom,
         toast,
         confirm: confirmDialog,

@@ -554,13 +554,44 @@
 }
 
 @media (max-width: 640px) {
+    /* Phones: every tab visible (3 × 2), none hidden off-screen. */
     .rp-tabs {
-        padding: 8px 10px 0;
-        gap: 2px;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+        padding: 10px;
+        overflow: visible;
     }
 
     .rp-tab {
-        padding: 0 10px;
+        flex-direction: column;
+        justify-content: center;
+        gap: 2px;
+        overflow-wrap: normal;
+        min-width: 0;
+        min-height: 52px;
+        padding: 4px 4px;
+        border: 1px solid var(--cs-border);
+        border-radius: var(--cs-radius-sm);
+        font-size: 14px;
+        white-space: normal;
+        text-align: center;
+        line-height: 1.2;
+    }
+
+    .rp-tab > i {
+        display: none;
+    }
+
+    .rp-tab.is-active {
+        border-color: var(--cs-primary);
+        background: var(--cs-primary-softer);
+    }
+
+    .rp-tab-count {
+        min-width: 24px;
+        padding: 1px 7px;
+        font-size: 13px;
     }
 
     .rp-search {
@@ -969,4 +1000,96 @@
     .rp-feedback-tag {
         justify-self: start;
     }
+}
+
+/* ==========================================================================
+   Main / suggested main / confirmed duplicate labels (Nov 2026)
+   ========================================================================== */
+
+.rp-role-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: var(--cs-radius-pill);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+
+.rp-role-tag.is-main {
+    background: var(--cs-primary);
+    color: #fff;
+}
+
+.rp-role-tag.is-suggested {
+    background: var(--cs-primary-softer);
+    border-color: var(--cs-primary);
+    border-style: dashed;
+    color: var(--cs-primary-hover);
+}
+
+.rp-role-tag.is-duplicate {
+    background: var(--cs-surface-alt);
+    border-color: var(--cs-border-strong);
+    color: var(--cs-muted);
+}
+
+.rp-form-badges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+/* "N confirmed duplicates … see them in View" (a button that opens View). */
+.rp-linked-count {
+    margin-top: 6px;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 15px;
+    text-align: left;
+    color: var(--cs-primary-hover);
+    cursor: pointer;
+}
+
+.rp-linked-count:hover {
+    text-decoration: underline;
+}
+
+.rp-linked-count:focus-visible {
+    outline: none;
+    box-shadow: var(--cs-focus);
+    border-radius: 4px;
+}
+
+/* Loading a report that is not on this page. */
+.rp-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 48px 16px;
+    color: var(--cs-muted);
+}
+
+.rp-spinner {
+    width: 22px;
+    height: 22px;
+    border: 3px solid var(--cs-primary-soft);
+    border-top-color: var(--cs-primary);
+    border-radius: 50%;
+    animation: rp-spin 0.8s linear infinite;
+}
+
+@keyframes rp-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rp-spinner { animation-duration: 2.4s; }
 }

@@ -13,7 +13,7 @@ require_once __DIR__ . "/helpers.php";
 $pageTitle = $pageTitle ?? "Admin";
 $pageStyles = $pageStyles ?? [];
 $pageHead = $pageHead ?? "";
-$csAssetVersion = "2.0";
+$csAssetVersion = "2.1";
 ?>
 <!DOCTYPE html>
 <html lang="en">

@@ -136,13 +136,17 @@ $stmt->close();
 // GET AVAILABLE DATE RANGE
 // ==========================================================
 
+// Report dates are stored in UTC; group and filter by Philippine calendar day.
+$csLocalReported = csSqlLocal("r.dateReported");
+$csLocalReportedBare = csSqlLocal("dateReported");
+
 $databaseStartDate = "";
 $databaseEndDate = "";
 
 $stmt = $conn->prepare("
     SELECT
-        MIN(DATE(dateReported)) AS startDate,
-        MAX(DATE(dateReported)) AS endDate
+        MIN(DATE($csLocalReportedBare)) AS startDate,
+        MAX(DATE($csLocalReportedBare)) AS endDate
 
     FROM reports
 
@@ -210,7 +214,7 @@ $params = [
 
 if ($startDate !== "") {
 
-    $where[] = "DATE(r.dateReported) >= ?";
+    $where[] = "DATE($csLocalReported) >= ?";
 
     $types .= "s";
 
@@ -220,7 +224,7 @@ if ($startDate !== "") {
 
 if ($endDate !== "") {
 
-    $where[] = "DATE(r.dateReported) <= ?";
+    $where[] = "DATE($csLocalReported) <= ?";
 
     $types .= "s";
 
@@ -353,7 +357,7 @@ $statusParams = [
 if ($startDate !== "") {
 
     $statusWhere[] =
-        "DATE(r.dateReported) >= ?";
+        "DATE($csLocalReported) >= ?";
 
     $statusTypes .= "s";
 
@@ -363,7 +367,7 @@ if ($startDate !== "") {
 if ($endDate !== "") {
 
     $statusWhere[] =
-        "DATE(r.dateReported) <= ?";
+        "DATE($csLocalReported) <= ?";
 
     $statusTypes .= "s";
 
@@ -510,7 +514,7 @@ $dailyReports = [];
 
 $sql = "
     SELECT
-        DATE(r.dateReported) AS reportDate,
+        DATE($csLocalReported) AS reportDate,
         s.statusID,
         s.statusName,
         COUNT(r.reportID) AS reportCount
@@ -523,7 +527,7 @@ $sql = "
     WHERE $whereSQL
 
     GROUP BY
-        DATE(r.dateReported),
+        DATE($csLocalReported),
         s.statusID,
         s.statusName
 

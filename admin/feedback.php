@@ -35,7 +35,7 @@ $average = $all ? array_sum(array_column($all, "rating")) / count($all) : 0;
 csMarkFeedbackSeen($conn, $barangayID, $all);
 
 $pageTitle = "Resident Feedback";
-$pageStyles = ["feedback.css"];
+$pageStyles = ["feedback.css", "reports.css"];
 include __DIR__ . "/partial/head.php";
 ?>
 <body>
@@ -106,7 +106,7 @@ include __DIR__ . "/partial/head.php";
                         </dl>
 
                         <div class="fb-actions">
-                            <a class="cs-btn cs-btn-secondary cs-btn-sm" href="<?= csEscape(csUrl("reports.php", ["tab" => "all", "search" => $item["reportID"], "open" => $item["reportID"]])) ?>">
+                            <a class="cs-btn cs-btn-secondary cs-btn-sm" <?= csViewReportAttrs($item["reportID"]) ?>>
                                 <i class="bi bi-clipboard-check" aria-hidden="true"></i> View Report
                             </a>
                             <?php if ($item["userID"] !== ""): ?>
@@ -132,6 +132,9 @@ include __DIR__ . "/partial/head.php";
     <?php include __DIR__ . "/partial/footer.php"; ?>
 </main>
 
+<?php include __DIR__ . "/partial/report_drawer.php"; ?>
+
 <?php include __DIR__ . "/partial/scripts.php"; ?>
+<?php include __DIR__ . "/partial/report_drawer_scripts.php"; ?>
 </body>
 </html>

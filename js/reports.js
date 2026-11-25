@@ -1,7 +1,13 @@
 /* ==========================================================================
-   CitiSense Admin — Reports page
+   CitiSense Admin — report details panel ("View") and report actions
    --------------------------------------------------------------------------
    View details · Accept · Reject · Mark as Resolved · Set target date
+
+   Used on the Reports page and on every page that opens a report in place
+   (Possible Duplicates, Resident Feedback, Issue Map, Dashboard, Messages):
+   any element with data-view="REPORTID" opens that report here. Reports that
+   are not on the page are loaded from report_details.php, so the
+   administrator never leaves the current page, tab, filters or page number.
 
    Endpoints (all existing except reject_report.php):
      update_report_status.php    Accept (-> In Progress), Resolve (-> Resolved)
@@ -19,11 +25,17 @@
     const OVERDUE = "STAT004";
 
     let reports = {};
-    try {
-        reports = JSON.parse(document.getElementById("reportPayload").textContent || "{}") || {};
-    } catch (error) {
-        console.error("Reports: could not read report data.", error);
+    const payloadElement = document.getElementById("reportPayload");
+    if (payloadElement) {
+        try {
+            reports = JSON.parse(payloadElement.textContent || "{}") || {};
+        } catch (error) {
+            console.error("Reports: could not read report data.", error);
+        }
     }
+
+    const drawerCheck = document.getElementById("reportDrawer");
+    if (!drawerCheck) return; // this page has no details panel
 
     const drawer = document.getElementById("reportDrawer");
     const overlay = document.getElementById("reportDrawerOverlay");
@@ -33,6 +45,7 @@
 
     let activeReport = null;
     let lastTrigger = null;
+    let loadingID = "";
 
     /* ------------------------------------------------------------ helpers */
 
@@ -115,6 +128,15 @@
 
     /* ------------------------------------------------------------- drawer */
 
+    /* Remember the open report in the address (?open=ID) without reloading,
+       so a refresh, or the reload after an action, shows the same report. */
+    function rememberOpen(id) {
+        const url = new URL(window.location.href);
+        if (id) url.searchParams.set("open", id);
+        else url.searchParams.delete("open");
+        if (url.toString() !== window.location.href) history.replaceState(history.state, "", url.toString());
+    }
+
     function openDrawer(trigger) {
         lastTrigger = trigger || document.activeElement;
         drawer.classList.add("is-open");
@@ -124,12 +146,9 @@
     }
 
     function closeDrawer() {
-        // Opened from a link (?open=ID): forget it, so a refresh shows the list.
-        const url = new URL(window.location.href);
-        if (url.searchParams.has("open")) {
-            url.searchParams.delete("open");
-            history.replaceState(null, "", url.toString());
-        }
+        // Forget ?open=ID, so a refresh shows the page as it was.
+        rememberOpen("");
+        loadingID = "";
         drawer.classList.remove("is-open");
         overlay.classList.remove("is-open");
         document.body.classList.remove("cs-no-scroll");
@@ -222,12 +241,50 @@
         return buttons;
     }
 
+    /* Load a report that is not on this page, then show it. */
+    async function loadAndShow(id, trigger) {
+        loadingID = id;
+        drawerTitle.textContent = "Report " + id;
+        drawerBody.replaceChildren(el("div", { class: "rp-loading", role: "status" },
+            el("span", { class: "rp-spinner", "aria-hidden": "true" }), "Loading report " + id + "…"));
+        drawerActions.replaceChildren();
+        drawerActions.hidden = true;
+        if (!drawer.classList.contains("is-open")) openDrawer(trigger);
+
+        try {
+            const response = await fetch("report_details.php?id=" + encodeURIComponent(id), {
+                headers: { Accept: "application/json" },
+                credentials: "same-origin"
+            });
+            let data = null;
+            try {
+                data = await response.json();
+            } catch (error) {
+                throw new Error("The server sent an unexpected reply. Please try again.");
+            }
+            if (!response.ok || !data || !data.success) {
+                throw new Error((data && data.message) || "The report could not be loaded. Please try again.");
+            }
+            Object.assign(reports, data.reports || {});
+            if (loadingID !== id) return; // another report was chosen meanwhile
+            loadingID = "";
+            showDetails(id, trigger);
+        } catch (error) {
+            if (loadingID !== id) return;
+            loadingID = "";
+            drawerBody.replaceChildren(el("div", { class: "cs-alert cs-alert-error" }, icon("bi-exclamation-circle-fill"),
+                el("div", { class: "cs-alert-body" }, error.message)));
+        }
+    }
+
     function showDetails(id, trigger) {
         const report = reports[id];
         if (!report) {
-            CS.toast("This report could not be opened. Please refresh the page.", "error");
+            loadAndShow(id, trigger);
             return;
         }
+        loadingID = "";
+        rememberOpen(id);
         activeReport = report;
         drawerTitle.textContent = "Report " + report.id;
 
@@ -244,22 +301,22 @@
 
         let notice = null;
         if (report.linkedTo) {
+            // Only reports the administrator marked as duplicates get here.
             notice = el("div", { class: "cs-alert cs-alert-info" }, icon("bi-files"),
                 el("div", { class: "cs-alert-body" },
-                    el("strong", { class: "cs-alert-title", text: "Duplicate of report " + report.linkedTo }),
-                    "This report was marked as a duplicate. Its status always follows report " + report.linkedTo +
+                    el("strong", { class: "cs-alert-title", text: "Confirmed duplicate of report " + report.linkedTo }),
+                    "An administrator marked this report as a duplicate. Its status always follows report " + report.linkedTo +
                     " automatically, and its resident gets the same updates.",
-                    reports[report.linkedTo] ? el("button", { type: "button", class: "rp-link-btn", "data-view": report.linkedTo }, "Open report " + report.linkedTo) : null
+                    el("button", { type: "button", class: "rp-link-btn", "data-view": report.linkedTo }, "Open main report " + report.linkedTo)
                 ));
         } else if (!report.isOriginal) {
-            const original = reports[report.originalID];
-            notice = el("div", { class: "cs-alert cs-alert-info" }, icon("bi-link-45deg"),
+            notice = el("div", { class: "cs-alert cs-alert-info" }, icon("bi-geo-alt"),
                 el("div", { class: "cs-alert-body" },
-                    el("strong", { class: "cs-alert-title", text: "Same problem as report " + report.originalID }),
+                    el("strong", { class: "cs-alert-title", text: "Same place and type of issue as report " + report.originalID }),
                     report.statusID === PENDING && report.originalStatusID !== PENDING
                         ? "Report " + report.originalID + " is already " + report.originalStatus + ". You can reject this repeat report if it is not needed."
                         : "Its status changes together with report " + report.originalID + ".",
-                    original ? el("button", { type: "button", class: "rp-link-btn", "data-view": report.originalID }, "Open report " + report.originalID) : null
+                    el("button", { type: "button", class: "rp-link-btn", "data-view": report.originalID }, "Open report " + report.originalID)
                 ));
         } else if (report.statusID === RESOLVED) {
             notice = el("div", { class: "cs-alert cs-alert-success" }, icon("bi-check-circle-fill"),
@@ -315,14 +372,27 @@
             ))
         );
 
+        /* A suggestion from the duplicate check: never shown as confirmed. */
         const duplicateNote = report.duplicateGroup
             ? el("div", { class: "cs-alert cs-alert-warning" }, icon("bi-files"),
                 el("div", { class: "cs-alert-body" },
-                    el("strong", { class: "cs-alert-title", text: "This may be a duplicate" }),
-                    "It looks like the same problem as report " + report.duplicateOthers.join(", ") + ". ",
+                    el("strong", { class: "cs-alert-title", text: report.isSuggestedMain ? "Suggested main report of possible duplicates" : "This may be a duplicate (not confirmed)" }),
+                    (report.isSuggestedMain
+                        ? "Reports " + report.duplicateOthers.join(", ") + " may be about the same problem. "
+                        : "It looks like the same problem as report " + report.duplicateOthers.join(", ") + ". ") +
+                    "Nothing is linked until you review it. ",
                     el("a", { href: "possible_duplicates.php?from=" + encodeURIComponent(report.id) + "#group-" + report.duplicateGroup }, "Compare them side by side")
                 ))
             : null;
+
+        /* Main report of confirmed duplicates: suggested until it is accepted. */
+        const roleTag = report.role === "main"
+            ? el("span", { class: "rp-role-tag is-main" }, icon("bi-star-fill"), "Main report")
+            : (report.role === "suggested-main" || report.isSuggestedMain)
+                ? el("span", { class: "rp-role-tag is-suggested" }, icon("bi-star"), "Suggested main report")
+                : report.role === "duplicate"
+                    ? el("span", { class: "rp-role-tag is-duplicate" }, icon("bi-files"), "Duplicate of " + report.linkedTo)
+                    : null;
 
         /* Same layout as the report form in the CitiSense app: numbered sections
            1 Photo · 2 Issue Category · 3 Location (with map) · 4 Description. */
@@ -346,7 +416,7 @@
 
         const formCard = el("div", { class: "rp-form-card" },
             el("div", { class: "rp-form-intro" },
-                badge(report.status),
+                el("div", { class: "rp-form-badges" }, badge(report.status), roleTag),
                 el("h3", { text: report.title || report.category }),
                 el("p", { class: "cs-subtle", text: "Report " + report.id + " · submitted " + report.date })
             ),
@@ -371,8 +441,11 @@
         const linked = (report.linkedIDs || []).map((dupID) => reports[dupID]).filter(Boolean);
         const linkedBlock = linked.length
             ? el("section", { class: "rp-section rp-linked" },
-                el("h4", { text: "Duplicate reports (" + linked.length + ")" }),
-                el("p", { class: "cs-subtle", text: "Marked as duplicates of this report. They always have the same status and expected completion date, and their residents get the same updates." }),
+                el("h4", { text: "Confirmed duplicate reports (" + linked.length + ")" }),
+                el("p", { class: "cs-subtle", text: (report.role === "main"
+                    ? "This is the main report. "
+                    : "This is the suggested main report; it becomes the main report when it is accepted. ") +
+                    "These reports were marked as its duplicates. They are not listed separately on the Reports page, always have the same status and expected completion date, and their residents get the same updates." }),
                 el("ul", { class: "rp-linked-list" }, linked.map((dup) => el("li", {},
                     dup.images.length
                         ? el("img", { class: "rp-linked-thumb", src: dup.images[0], alt: "" })
@@ -652,7 +725,15 @@
         if (restore && reports[restore.dataset.restore]) return restoreReport(reports[restore.dataset.restore]);
 
         const view = target.closest("[data-view]");
-        if (view) return showDetails(view.dataset.view, view);
+        if (view) {
+            // Links keep a normal address (open in a new tab still works);
+            // a plain click opens the report here instead.
+            if (view.tagName === "A") {
+                if (event.ctrlKey || event.metaKey || event.shiftKey || event.button === 1) return;
+                event.preventDefault();
+            }
+            return showDetails(view.dataset.view, view);
+        }
 
         const accept = target.closest("[data-accept]");
         if (accept && reports[accept.dataset.accept]) return openAccept(reports[accept.dataset.accept]);
@@ -667,12 +748,16 @@
     /* Links such as reports.php?search=REP001&open=REP001 (from Possible
        Duplicates, Messages or the Dashboard) open that report straight away. */
     const openID = new URLSearchParams(window.location.search).get("open");
-    if (openID) {
-        if (reports[openID]) {
-            showDetails(openID, document.querySelector('[data-view="' + CSS.escape(openID) + '"]'));
-        } else {
-            CS.toast("Report " + openID + " could not be found in this list.", "error");
-        }
+    if (openID && /^[A-Za-z0-9_-]{1,50}$/.test(openID)) {
+        // Shown in place (loaded if it is not in this list); the tab stays as it is.
+        showDetails(openID, document.querySelector('[data-view="' + CSS.escape(openID) + '"]'));
+    }
+
+    /* Tablets: the tab strip scrolls sideways; keep the chosen tab in view. */
+    const tabStrip = document.querySelector(".rp-tabs");
+    const activeTab = tabStrip && tabStrip.querySelector(".rp-tab.is-active");
+    if (activeTab && tabStrip.scrollWidth > tabStrip.clientWidth) {
+        tabStrip.scrollLeft = Math.max(0, activeTab.offsetLeft - tabStrip.clientWidth / 2 + activeTab.offsetWidth / 2);
     }
 
     /* ----------------------------------------------------- download form */

@@ -145,7 +145,7 @@ $statTiles = [
 ];
 
 $pageTitle = "Dashboard";
-$pageStyles = ["dashboard.css"];
+$pageStyles = ["dashboard.css", "reports.css"];
 $pageHead = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">';
 include __DIR__ . "/partial/head.php";
 ?>
@@ -205,11 +205,14 @@ include __DIR__ . "/partial/head.php";
         <h2 id="statsHeading" class="dash-section-title">Report summary</h2>
         <div class="cs-stat-grid dash-stats">
             <?php foreach ($statTiles as [$label, $value, $icon, $tone, $statusID]): ?>
-                <a class="cs-stat" href="<?= csEscape($statusID === "all" ? "reports.php?tab=all" : csUrl("reports.php", ["statusID" => $statusID])) ?>">
-                    <span class="cs-icon-circle cs-tone-<?= $tone ?>"><i class="bi <?= $icon ?>" aria-hidden="true"></i></span>
-                    <span>
-                        <span class="cs-stat-value"><?= number_format($value) ?></span>
-                        <span class="cs-stat-label"><?= csEscape($label) ?></span>
+                <a class="cs-stat dash-stat" href="<?= csEscape($statusID === "all" ? "reports.php?tab=all" : csUrl("reports.php", ["statusID" => $statusID])) ?>">
+                    <!-- The inner box lays itself out by the card's own width (see dashboard.css). -->
+                    <span class="dash-stat-inner">
+                        <span class="cs-icon-circle cs-tone-<?= $tone ?>"><i class="bi <?= $icon ?>" aria-hidden="true"></i></span>
+                        <span class="dash-stat-text">
+                            <span class="cs-stat-value"><?= number_format($value) ?></span>
+                            <span class="cs-stat-label"><?= csEscape($label) ?></span>
+                        </span>
                     </span>
                 </a>
             <?php endforeach; ?>
@@ -232,7 +235,7 @@ include __DIR__ . "/partial/head.php";
                 <ul class="dash-report-list">
                     <?php foreach ($latestReports as $report): ?>
                         <li>
-                            <a href="<?= csEscape(csUrl("reports.php", ["tab" => "all", "search" => $report["reportID"], "open" => $report["reportID"]])) ?>">
+                            <a <?= csViewReportAttrs($report["reportID"]) ?>>
                                 <span class="cs-icon-circle"><i class="bi <?= csCategoryIcon($report["categoryName"]) ?>" aria-hidden="true"></i></span>
                                 <span class="dash-report-text">
                                     <strong><?= csEscape($report["categoryName"]) ?></strong>
@@ -306,10 +309,13 @@ include __DIR__ . "/partial/head.php";
     <?php include __DIR__ . "/partial/footer.php"; ?>
 </main>
 
+<?php include __DIR__ . "/partial/report_drawer.php"; ?>
+
 <?php include __DIR__ . "/partial/scripts.php"; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<?php $csLeafletLoaded = true; include __DIR__ . "/partial/report_drawer_scripts.php"; ?>
 <script>
 (function () {
     const mapElement = document.getElementById("reportHeatmap");

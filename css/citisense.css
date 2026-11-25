@@ -678,6 +678,137 @@ body.cs-no-scroll {
     cursor: pointer;
 }
 
+/*
+ * Custom dropdown (js/citisense.js, enhanceSelect): the same look and the
+ * same option list on every device. The real <select> stays underneath,
+ * invisible, for forms and validation.
+ */
+.cs-dropdown {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+}
+
+.cs-dropdown-native {
+    position: absolute !important;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.cs-dropdown-button {
+    display: flex;
+    align-items: center;
+    text-align: left;
+    min-width: 0;
+}
+
+.cs-dropdown-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cs-dropdown.is-placeholder .cs-dropdown-text {
+    color: #6b7689;
+}
+
+.cs-dropdown.is-open .cs-dropdown-button {
+    border-color: var(--cs-primary);
+    box-shadow: var(--cs-focus);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 16 16' fill='%232563eb'%3E%3Cpath d='M14.4 11.4a.75.75 0 0 1-1.06 0L8 6.06l-5.34 5.34a.75.75 0 1 1-1.06-1.06l5.87-5.87a.75.75 0 0 1 1.06 0l5.87 5.87a.75.75 0 0 1 0 1.06Z'/%3E%3C/svg%3E");
+}
+
+.cs-dropdown.is-invalid .cs-dropdown-button {
+    border-color: var(--cs-danger);
+}
+
+.cs-dropdown.is-disabled .cs-dropdown-button {
+    background-color: var(--cs-surface-alt);
+    color: var(--cs-subtle);
+    cursor: not-allowed;
+}
+
+.cs-dropdown-menu {
+    position: fixed;
+    z-index: 400; /* above dialogs (200) and the details panel (160) */
+    margin: 0;
+    padding: 6px;
+    list-style: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    background: var(--cs-surface);
+    border: 1px solid var(--cs-border);
+    border-radius: var(--cs-radius);
+    box-shadow: 0 16px 40px rgba(15, 30, 70, 0.18);
+    font-family: var(--cs-font);
+    font-size: 16px;
+    color: var(--cs-text);
+    animation: cs-dropdown-in 0.14s ease-out;
+}
+
+.cs-dropdown-menu.is-up {
+    animation-name: cs-dropdown-in-up;
+}
+
+.cs-dropdown-menu:focus {
+    outline: none;
+}
+
+.cs-dropdown-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 44px; /* comfortable touch target */
+    padding: 8px 12px;
+    border-radius: var(--cs-radius-sm);
+    line-height: 1.35;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.cs-dropdown-option i {
+    flex-shrink: 0;
+    color: var(--cs-primary);
+    font-size: 18px;
+    visibility: hidden;
+}
+
+.cs-dropdown-option.is-active {
+    background: var(--cs-primary-softer);
+}
+
+.cs-dropdown-option[aria-selected="true"] {
+    color: var(--cs-primary-hover);
+    font-weight: 600;
+}
+
+.cs-dropdown-option[aria-selected="true"] i {
+    visibility: visible;
+}
+
+.cs-dropdown-option[aria-disabled="true"] {
+    color: var(--cs-subtle);
+    cursor: default;
+}
+
+@keyframes cs-dropdown-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: none; }
+}
+
+@keyframes cs-dropdown-in-up {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: none; }
+}
+
 /* Date pickers: full height and left-aligned text on iPhone/Android too */
 input[type="date"].cs-input,
 input[type="datetime-local"].cs-input {
@@ -1375,6 +1506,106 @@ button.cs-stat:hover {
 .heatmap-map {
     touch-action: none;
     overscroll-behavior: contain;
+}
+
+/*
+ * Maps stay BEHIND the sidebar, menus, drawers and dialogs.
+ * Leaflet gives its panes z-index 400 and its controls 800-1000. Without a
+ * stacking context of their own, those layers compete with the whole page and
+ * cover the sidebar (z-index 60) on phones and tablets. isolation + z-index 0
+ * keeps every map layer inside the map box.
+ */
+.leaflet-container,
+.dash-map,
+.heatmap-map,
+.rp-map {
+    position: relative;
+    z-index: 0;
+    isolation: isolate;
+}
+
+/* Content never spills out of its box (Nov 2026) ----------------------------
+ * Long words (emails, addresses, report IDs, links) wrap inside their
+ * container, flex/grid children may shrink, media scales down, and wide
+ * tables scroll sideways inside their card instead of widening the page.
+ */
+html,
+body {
+    overflow-x: clip; /* last safety net; does not break sticky headers */
+}
+
+.cs-card,
+.cs-modal-dialog,
+.cs-drawer-body,
+.cs-alert,
+.cs-page-header,
+.cs-page-header h1,
+.cs-page-header p,
+.cs-empty p,
+.cs-toast {
+    min-width: 0;
+    overflow-wrap: break-word; /* breaks a word only when it cannot fit */
+}
+
+/* Values that are one long "word" (emails, addresses, IDs, links). */
+.cs-facts dd,
+.cs-card a[href^="mailto:"],
+.cs-drawer-body a,
+.cs-alert-body {
+    overflow-wrap: anywhere;
+}
+
+.cs-card > *,
+.cs-modal-body > *,
+.cs-drawer-body > *,
+.cs-alert-body {
+    min-width: 0;
+    max-width: 100%;
+}
+
+img,
+video,
+canvas,
+svg {
+    max-width: 100%;
+}
+
+img,
+video {
+    height: auto;
+}
+
+.cs-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.cs-card-footer,
+.cs-pagination,
+.cs-modal-footer,
+.cs-page-actions,
+.cs-form-actions {
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+.cs-modal-dialog {
+    max-width: 100%;
+}
+
+@media (max-width: 640px) {
+    /* Long button labels wrap instead of pushing out of the card. */
+    .cs-btn {
+        max-width: 100%;
+        white-space: normal;
+        text-align: center;
+    }
+
+    .cs-card-footer {
+        justify-content: center;
+        text-align: center;
+    }
 }
 
 /* 18. UTILITIES ============================================================ */

@@ -95,7 +95,7 @@ if (!function_exists("csLinkedMainOf")) {
             throw new DomainException("A report cannot be a duplicate of itself.");
         }
 
-        $now = date("Y-m-d H:i:s");
+        $now = csDbNow();
         $insert = $conn->prepare(
             "INSERT INTO duplicate_reviews (pairKey, barangayID, reportA, reportB, decision, decidedBy, decidedAt)
              VALUES (?, ?, ?, ?, 'linked', ?, ?)"
@@ -203,7 +203,7 @@ if (!function_exists("csLinkedMainOf")) {
             $note = "Same problem as report " . $mainID . ": follows its status."
                 . ($remarks !== null && $remarks !== "" ? " " . $remarks : "");
             $historyID = "H" . bin2hex(random_bytes(16));
-            $now = date("Y-m-d H:i:s");
+            $now = csDbNow();
             $history->bind_param("ssssss", $historyID, $dupID, $adminID, $statusID, $note, $now);
             $history->execute();
 

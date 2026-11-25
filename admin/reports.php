@@ -16,6 +16,7 @@ require_once __DIR__ . "/partial/schema.php";
 require_once __DIR__ . "/partial/duplicates.php";
 require_once __DIR__ . "/partial/duplicate_links.php";
 require_once __DIR__ . "/partial/feedback.php";
+require_once __DIR__ . "/partial/report_details.php";
 
 $barangayID = (string) $_SESSION["barangay_id"];
 $schemaReady = csEnsureSchema($conn);
@@ -147,32 +148,61 @@ if ($selectedCategory !== "") {
 }
 
 if ($startDate !== "") {
+    // Days are Philippine calendar days; dates are stored in UTC.
     $conditions[] = "r.dateReported >= ?";
     $types .= "s";
-    $params[] = $startDate . " 00:00:00";
+    $params[] = csToDb($startDate . " 00:00:00");
 }
 
 if ($endDate !== "") {
-    // Include the whole "To" day.
-    $conditions[] = "r.dateReported < DATE_ADD(?, INTERVAL 1 DAY)";
+    // Include the whole "To" day (Philippine time).
+    $conditions[] = "r.dateReported < ?";
     $types .= "s";
-    $params[] = $endDate;
+    $params[] = csToDb(date("Y-m-d", strtotime($endDate . " +1 day")) . " 00:00:00");
 }
 
+/*
+ * Confirmed duplicates (marked on Possible Duplicates) are not separate
+ * entries: they are listed inside their main report's View. Searching for a
+ * duplicate's ID therefore finds its main report.
+ */
+$linkMap = csDuplicateLinkMap($conn, $barangayID);
+
 if ($searchQuery !== "") {
+    $mainsOfMatches = [];
+    foreach ($linkMap as $dupID => $mainID) {
+        if (stripos((string) $dupID, $searchQuery) !== false) {
+            $mainsOfMatches[(string) $mainID] = true;
+        }
+    }
+    $mainsOfMatches = array_keys($mainsOfMatches);
+
     $conditions[] = "(
         EXISTS (SELECT 1 FROM categories sc WHERE sc.categoryID = r.categoryID AND sc.categoryName LIKE ?)
         OR EXISTS (SELECT 1 FROM location sl WHERE sl.locationID = r.locationID AND sl.address LIKE ?)
         OR EXISTS (SELECT 1 FROM users su WHERE su.userID = r.userID AND (su.firstName LIKE ? OR su.lastName LIKE ?))
         OR COALESCE(r.title, '') LIKE ?
         OR COALESCE(r.description, '') LIKE ?
-        OR CAST(r.reportID AS CHAR) LIKE ?
+        OR CAST(r.reportID AS CHAR) LIKE ?"
+        . ($mainsOfMatches ? " OR r.reportID IN (" . implode(",", array_fill(0, count($mainsOfMatches), "?")) . ")" : "")
+        . "
     )";
 
     $types .= "sssssss";
     for ($i = 0; $i < 7; $i++) {
         $params[] = "%" . $searchQuery . "%";
     }
+    foreach ($mainsOfMatches as $mainID) {
+        $types .= "s";
+        $params[] = (string) $mainID;
+    }
+}
+
+if ($linkMap) {
+    $dupIDs = array_map("strval", array_keys($linkMap));
+    $conditions[] = "r.reportID NOT IN (" . implode(",", array_fill(0, count($dupIDs), "?")) . ")";
+    $types .= str_repeat("s", count($dupIDs));
+    array_push($params, ...$dupIDs);
 }
 
 $whereSQL = implode(" AND ", $conditions);
@@ -230,18 +260,7 @@ $totalPages = max(1, (int) ceil($totalReports / $perPage));
 $currentPage = min($currentPage, $totalPages);
 $offset = ($currentPage - 1) * $perPage;
 
-$reportSelectSQL = "
-    SELECT
-        r.reportID, r.userID, r.categoryID, r.locationID, r.statusID,
-        r.title, r.description, r.dateReported, r.timeline,
-        c.categoryName, s.statusName, l.address, l.latitude, l.longitude,
-        u.firstName, u.lastName, u.email, u.contactNo
-    FROM reports r
-    INNER JOIN categories c ON c.categoryID = r.categoryID
-    INNER JOIN stats s ON s.statusID = r.statusID
-    LEFT JOIN location l ON l.locationID = r.locationID
-    LEFT JOIN users u ON u.userID = r.userID
-";
+$reportSelectSQL = csReportSelectSQL();
 
 $stmt = reportsPrepare(
     $conn,
@@ -258,182 +277,16 @@ $reportList = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
 /* =========================================================
-   DETAILS FOR THIS PAGE: repeat reports, photos, history
+   DETAILS FOR THIS PAGE (shared with report_details.php)
 ========================================================= */
 
-$cycleMap = csClassifyReportCycles($conn, $barangayID);
-
-/* Reports linked as duplicates of a main report (they follow its status). */
-$linkMap = csDuplicateLinkMap($conn, $barangayID);
-$linkedCount = array_count_values($linkMap);
-$linkedByMain = [];
-foreach ($linkMap as $dupID => $mainID) {
-    $linkedByMain[$mainID][] = (string) $dupID;
-}
-
-/* Possible duplicates (suggestions only — reviewed on possible_duplicates.php). */
-$duplicateOf = [];
-foreach (csGroupDuplicatePairs(csFindDuplicatePairs($conn, $barangayID, true)) as $dupGroup) {
-    foreach ($dupGroup["ids"] as $dupID) {
-        $duplicateOf[$dupID] = [
-            "group" => $dupGroup["id"],
-            "others" => array_values(array_diff($dupGroup["ids"], [$dupID])),
-        ];
-    }
-}
-
-$detailReports = [];
+$reportContext = csReportContext($conn, $barangayID, true);
+$listRows = [];
 foreach ($reportList as $report) {
-    $detailReports[(string) $report["reportID"]] = $report;
+    $listRows[(string) $report["reportID"]] = $report;
 }
-
-/* Load the first report of each issue so its status is known. */
-$missing = [];
-foreach (array_keys($detailReports) as $id) {
-    $originalID = $cycleMap[$id]["originalID"] ?? $id;
-    if (!isset($detailReports[$originalID])) {
-        $missing[$originalID] = true;
-    }
-    // The main report of a linked duplicate, so "Open report …" works.
-    if (isset($linkMap[$id]) && !isset($detailReports[$linkMap[$id]])) {
-        $missing[$linkMap[$id]] = true;
-    }
-    // The duplicates of a main report, shown inside its View.
-    foreach ($linkedByMain[$id] ?? [] as $dupID) {
-        if (!isset($detailReports[$dupID])) {
-            $missing[$dupID] = true;
-        }
-    }
-}
-
-if ($missing) {
-    $ids = array_map("strval", array_keys($missing));
-    $marks = implode(",", array_fill(0, count($ids), "?"));
-    $stmt = reportsPrepare($conn, $reportSelectSQL . " WHERE r.barangayID = ? AND r.reportID IN ($marks)");
-    $missingTypes = "s" . str_repeat("s", count($ids));
-    $missingParams = [$barangayID, ...$ids];
-    $stmt->bind_param($missingTypes, ...$missingParams);
-    $stmt->execute();
-    foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $row) {
-        $detailReports[(string) $row["reportID"]] = $row;
-    }
-    $stmt->close();
-}
-
-$imagesByReport = [];
-$historyByReport = [];
-
-if ($detailReports) {
-    $ids = array_map("strval", array_keys($detailReports));
-    $marks = implode(",", array_fill(0, count($ids), "?"));
-    $idTypes = str_repeat("s", count($ids));
-
-    $stmt = reportsPrepare(
-        $conn,
-        "SELECT reportID, imagePath FROM reportimages WHERE reportID IN ($marks) ORDER BY uploadedAt ASC"
-    );
-    $stmt->bind_param($idTypes, ...$ids);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    while ($row = $result->fetch_assoc()) {
-        if (trim((string) $row["imagePath"]) !== "") {
-            $imagesByReport[(string) $row["reportID"]][] = csMediaUrl($row["imagePath"]);
-        }
-    }
-    $stmt->close();
-
-    $stmt = reportsPrepare(
-        $conn,
-        "SELECT h.reportID, h.remarks, h.dateChanged, s.statusName, u.firstName, u.lastName
-         FROM reporthistory h
-         INNER JOIN reports r ON r.reportID = h.reportID
-         INNER JOIN stats s ON s.statusID = h.statusID
-         LEFT JOIN users u ON u.userID = h.userID
-         WHERE r.barangayID = ? AND h.reportID IN ($marks)
-         ORDER BY h.dateChanged ASC, h.historyID ASC"
-    );
-    $historyTypes = "s" . $idTypes;
-    $historyParams = [$barangayID, ...$ids];
-    $stmt->bind_param($historyTypes, ...$historyParams);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    while ($row = $result->fetch_assoc()) {
-        $historyByReport[(string) $row["reportID"]][] = [
-            "raw" => (string) $row["dateChanged"],
-            "status" => (string) $row["statusName"],
-            "date" => csDate($row["dateChanged"], "M j, Y · g:i A"),
-            "by" => trim(($row["firstName"] ?? "") . " " . ($row["lastName"] ?? "")),
-            "remarks" => trim((string) ($row["remarks"] ?? "")),
-        ];
-    }
-    $stmt->close();
-}
-
-/* Residents' feedback after a report was resolved (from the app). */
-$feedbackByReport = csFeedbackForReports($conn, $barangayID, array_keys($detailReports));
-
-$payload = [];
-
-foreach ($detailReports as $id => $report) {
-    $id = (string) $id;
-    $cycle = $cycleMap[$id] ?? ["originalID" => $id, "isOriginal" => true, "cycleReportIDs" => [$id]];
-    $originalID = (string) $cycle["originalID"];
-
-    /*
-     * The mobile app fills "timeline" with the submission time when a report
-     * is created, so only treat it as a real target date once the report has
-     * been accepted and the date differs from the submission time.
-     */
-    $hasTargetDate = !empty($report["timeline"])
-        && in_array((string) $report["statusID"], ["STAT002", "STAT004"], true)
-        && strtotime((string) $report["timeline"]) !== strtotime((string) $report["dateReported"]);
-
-    /* Earliest allowed expected completion day: when it was last accepted (In Progress). */
-    $acceptedAt = (string) $report["dateReported"];
-    foreach ($historyByReport[$id] ?? [] as $entry) {
-        if (strtolower(trim($entry["status"])) === "in progress") {
-            $acceptedAt = $entry["raw"];
-        }
-    }
-
-    $payload[$id] = [
-        "id" => $id,
-        "category" => (string) $report["categoryName"],
-        "title" => trim((string) ($report["title"] ?? "")),
-        "description" => trim((string) ($report["description"] ?? "")),
-        "address" => (string) ($report["address"] ?? ""),
-        "lat" => is_numeric($report["latitude"] ?? null) ? (float) $report["latitude"] : null,
-        "lng" => is_numeric($report["longitude"] ?? null) ? (float) $report["longitude"] : null,
-        "date" => csDate($report["dateReported"], "F j, Y · g:i A"),
-        "timeline" => $hasTargetDate ? csDate($report["timeline"], "F j, Y · g:i A") : "",
-        "timelineInput" => $hasTargetDate ? csDate($report["timeline"], "Y-m-d\TH:i") : "",
-        "timelineMin" => csDate($acceptedAt, "Y-m-d\T00:00"),
-        "acceptedOn" => csDate($acceptedAt, "F j, Y"),
-        "statusID" => (string) $report["statusID"],
-        "status" => (string) $report["statusName"],
-        "resident" => trim(($report["firstName"] ?? "") . " " . ($report["lastName"] ?? "")),
-        "email" => (string) ($report["email"] ?? ""),
-        "contact" => (string) ($report["contactNo"] ?? ""),
-        "images" => $imagesByReport[$id] ?? [],
-        "history" => $historyByReport[$id] ?? [],
-        "isOriginal" => (bool) $cycle["isOriginal"],
-        "linkedTo" => $linkMap[$id] ?? "",
-        "linkedCount" => $linkedCount[$id] ?? 0,
-        "linkedIDs" => $linkedByMain[$id] ?? [],
-        "feedback" => $feedbackByReport[$id] ?? null,
-        "originalID" => $originalID,
-        "originalStatusID" => (string) ($detailReports[$originalID]["statusID"] ?? $report["statusID"]),
-        "originalStatus" => (string) ($detailReports[$originalID]["statusName"] ?? $report["statusName"]),
-        "cycleSize" => count($cycle["cycleReportIDs"]),
-        "duplicateGroup" => $duplicateOf[$id]["group"] ?? "",
-        "duplicateOthers" => $duplicateOf[$id]["others"] ?? [],
-    ];
-}
-
-$payloadJSON = json_encode(
-    $payload,
-    JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE
-);
+$payload = csReportDetailsPayload($conn, $barangayID, array_keys($listRows), $reportContext, $listRows);
+$payloadJSON = csReportPayloadJSON($payload);
 
 $baseQuery = [
     "tab" => $tab,
@@ -594,6 +447,11 @@ include __DIR__ . "/partial/head.php";
                             <div class="rp-title-row">
                                 <h2><?= csEscape($info["title"] !== "" ? $info["title"] : $report["categoryName"]) ?></h2>
                                 <?= csStatusBadge($report["statusName"]) ?>
+                                <?php if ($info["role"] === "main"): ?>
+                                    <span class="rp-role-tag is-main" title="Confirmed duplicates follow this report"><i class="bi bi-star-fill" aria-hidden="true"></i>Main report</span>
+                                <?php elseif ($info["role"] === "suggested-main" || $info["isSuggestedMain"]): ?>
+                                    <span class="rp-role-tag is-suggested" title="<?= $info["role"] === "suggested-main" ? "Becomes the main report when it is accepted" : "Suggested as the main report of possible duplicates" ?>"><i class="bi bi-star" aria-hidden="true"></i>Suggested main report</span>
+                                <?php endif; ?>
                             </div>
                             <!-- One detail per line, easier to read. The location shows only in View. -->
                             <dl class="cs-facts">
@@ -614,12 +472,12 @@ include __DIR__ . "/partial/head.php";
                                     <dd><?= csEscape($info["resident"] !== "" ? $info["resident"] : "Resident") ?></dd>
                                 </div>
                             </dl>
-                            <?php if ($isLinked): ?>
+                            <?php if ($isLinked): /* only confirmed (admin-marked) duplicates say "Duplicate of" */ ?>
                                 <p class="rp-line rp-repeat"><i class="bi bi-files" aria-hidden="true"></i>Duplicate of report <?= csEscape($info["linkedTo"]) ?> · follows its status</p>
                             <?php elseif (!$info["isOriginal"]): ?>
-                                <p class="rp-line rp-repeat"><i class="bi bi-link-45deg" aria-hidden="true"></i>Same problem as report <?= csEscape($info["originalID"]) ?></p>
+                                <p class="rp-line rp-repeat"><i class="bi bi-geo-alt" aria-hidden="true"></i>Same place and type of issue as report <?= csEscape($info["originalID"]) ?></p>
                             <?php elseif ($info["cycleSize"] > 1): ?>
-                                <p class="rp-line rp-repeat"><i class="bi bi-people" aria-hidden="true"></i><?= $info["cycleSize"] - 1 ?> other <?= $info["cycleSize"] - 1 === 1 ? "resident" : "residents" ?> reported this too</p>
+                                <p class="rp-line rp-repeat"><i class="bi bi-people" aria-hidden="true"></i><?= $info["cycleSize"] - 1 ?> other <?= $info["cycleSize"] - 1 === 1 ? "report" : "reports" ?> at the same place</p>
                             <?php endif; ?>
                             <?php if (!empty($info["feedback"])): $fb = $info["feedback"]; ?>
                                 <p class="rp-feedback-tag <?= $fb["fixed"] ? "is-yes" : "is-no" ?>">
@@ -628,12 +486,19 @@ include __DIR__ . "/partial/head.php";
                                 </p>
                             <?php endif; ?>
                             <?php if ($info["linkedCount"] > 0): ?>
-                                <p class="rp-line rp-repeat"><i class="bi bi-files" aria-hidden="true"></i><?= $info["linkedCount"] ?> duplicate <?= $info["linkedCount"] === 1 ? "report follows" : "reports follow" ?> this report's status</p>
+                                <button type="button" class="rp-line rp-linked-count" data-view="<?= csEscape($id) ?>">
+                                    <i class="bi bi-files" aria-hidden="true"></i>
+                                    <?= $info["linkedCount"] ?> confirmed duplicate <?= $info["linkedCount"] === 1 ? "report follows" : "reports follow" ?> this report · see them in View
+                                </button>
                             <?php endif; ?>
-                            <?php if ($info["duplicateGroup"] !== ""): ?>
+                            <?php if ($info["duplicateGroup"] !== ""): /* a suggestion only, not a confirmed relationship */ ?>
                                 <a class="rp-dup-tag" href="possible_duplicates.php?from=<?= csEscape(rawurlencode($id)) ?>#group-<?= csEscape($info["duplicateGroup"]) ?>">
                                     <i class="bi bi-files" aria-hidden="true"></i>
-                                    Possible duplicate of <?= csEscape(implode(", ", array_slice($info["duplicateOthers"], 0, 3))) ?><?= count($info["duplicateOthers"]) > 3 ? " +" . (count($info["duplicateOthers"]) - 3) . " more" : "" ?>
+                                    <?php if ($info["isSuggestedMain"]): ?>
+                                        Possible duplicates to review: <?= csEscape(implode(", ", array_slice($info["duplicateOthers"], 0, 3))) ?><?= count($info["duplicateOthers"]) > 3 ? " +" . (count($info["duplicateOthers"]) - 3) . " more" : "" ?>
+                                    <?php else: ?>
+                                        Possible duplicate of <?= csEscape(implode(", ", array_slice($info["duplicateOthers"], 0, 3))) ?><?= count($info["duplicateOthers"]) > 3 ? " +" . (count($info["duplicateOthers"]) - 3) . " more" : "" ?> · not confirmed
+                                    <?php endif; ?>
                                     <span class="rp-dup-review">Review</span>
                                 </a>
                             <?php endif; ?>
@@ -700,172 +565,7 @@ include __DIR__ . "/partial/head.php";
     <?php include __DIR__ . "/partial/footer.php"; ?>
 </main>
 
-<!-- REPORT DETAILS -->
-<div class="cs-drawer-backdrop" id="reportDrawerOverlay"></div>
-<aside class="cs-drawer" id="reportDrawer" role="dialog" aria-modal="true" aria-labelledby="reportDrawerTitle" tabindex="-1">
-    <div class="cs-drawer-header">
-        <h2 id="reportDrawerTitle">Report details</h2>
-        <button type="button" class="cs-btn cs-btn-ghost cs-btn-sm" id="closeReportDrawer">
-            <i class="bi bi-x-lg" aria-hidden="true"></i> Close
-        </button>
-    </div>
-    <div class="cs-drawer-body" id="reportDrawerContent"></div>
-    <div class="rp-drawer-actions" id="reportDrawerActions"></div>
-</aside>
-
-<!-- ACCEPT -->
-<div class="cs-modal" id="acceptModal" role="dialog" aria-modal="true" aria-labelledby="acceptTitle">
-    <div class="cs-modal-dialog">
-        <form id="acceptForm">
-            <div class="cs-modal-body">
-                <span class="cs-confirm-icon"><i class="bi bi-check-lg" aria-hidden="true"></i></span>
-                <h2 id="acceptTitle">Accept this report?</h2>
-                <p class="cs-muted" id="acceptText">Your team will work on this problem. The resident will be notified.</p>
-
-                <div class="cs-field">
-                    <label class="cs-label" for="acceptTimeline">When do you expect to fix it? <span class="cs-subtle">(optional)</span></label>
-                    <input type="datetime-local" id="acceptTimeline" class="cs-input">
-                </div>
-
-                <div class="cs-field">
-                    <label class="cs-label" for="acceptMessage">Message to the resident <span class="cs-subtle">(optional)</span></label>
-                    <textarea id="acceptMessage" class="cs-textarea" rows="3" maxlength="1000" placeholder="Example: Our team will check the area tomorrow morning."></textarea>
-                </div>
-            </div>
-            <div class="cs-modal-footer">
-                <button type="button" class="cs-btn cs-btn-ghost" data-modal-close>Cancel</button>
-                <button type="submit" class="cs-btn cs-btn-primary" id="acceptSubmit">
-                    <i class="bi bi-check-lg" aria-hidden="true"></i> Accept Report
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- REJECT -->
-<div class="cs-modal" id="rejectModal" role="dialog" aria-modal="true" aria-labelledby="rejectTitle">
-    <div class="cs-modal-dialog">
-        <form id="rejectForm">
-            <div class="cs-modal-body">
-                <span class="cs-confirm-icon is-danger"><i class="bi bi-x-lg" aria-hidden="true"></i></span>
-                <h2 id="rejectTitle">Reject this report?</h2>
-                <p class="cs-muted" id="rejectText">The resident will be told that the report was not accepted, with your reason.</p>
-
-                <fieldset class="rp-reasons">
-                    <legend class="cs-label">Why are you rejecting it?</legend>
-                    <?php foreach ([
-                        "This problem was already reported.",
-                        "The location is outside our barangay.",
-                        "There is not enough information or a clear photo.",
-                        "This is not a problem the barangay handles.",
-                    ] as $reason): ?>
-                        <label class="rp-reason">
-                            <input type="radio" name="quickReason" value="<?= csEscape($reason) ?>">
-                            <span><?= csEscape($reason) ?></span>
-                        </label>
-                    <?php endforeach; ?>
-                </fieldset>
-
-                <div class="cs-field">
-                    <label class="cs-label" for="rejectReason">Reason sent to the resident</label>
-                    <textarea id="rejectReason" class="cs-textarea" rows="3" maxlength="1000" required placeholder="Choose a reason above or write your own."></textarea>
-                </div>
-            </div>
-            <div class="cs-modal-footer">
-                <button type="button" class="cs-btn cs-btn-ghost" data-modal-close>Cancel</button>
-                <button type="submit" class="cs-btn cs-btn-danger" id="rejectSubmit">
-                    <i class="bi bi-x-lg" aria-hidden="true"></i> Reject Report
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- RESOLVE -->
-<div class="cs-modal" id="resolveModal" role="dialog" aria-modal="true" aria-labelledby="resolveTitle">
-    <div class="cs-modal-dialog">
-        <form id="resolveForm">
-            <div class="cs-modal-body">
-                <span class="cs-confirm-icon"><i class="bi bi-check2-all" aria-hidden="true"></i></span>
-                <h2 id="resolveTitle">Mark as resolved?</h2>
-                <p class="cs-muted" id="resolveText">Only do this when the problem is fixed. This closes the report.</p>
-                <div class="cs-field">
-                    <label class="cs-label" for="resolveMessage">Message to the resident <span class="cs-subtle">(optional)</span></label>
-                    <textarea id="resolveMessage" class="cs-textarea" rows="3" maxlength="1000" placeholder="Example: The garbage has been collected. Thank you for reporting!"></textarea>
-                </div>
-            </div>
-            <div class="cs-modal-footer">
-                <button type="button" class="cs-btn cs-btn-ghost" data-modal-close>Cancel</button>
-                <button type="submit" class="cs-btn cs-btn-primary" id="resolveSubmit">
-                    <i class="bi bi-check2-all" aria-hidden="true"></i> Mark as Resolved
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- CHANGE STATUS (accepted reports) -->
-<div class="cs-modal" id="statusModal" role="dialog" aria-modal="true" aria-labelledby="statusTitle">
-    <div class="cs-modal-dialog">
-        <form id="statusForm" novalidate>
-            <div class="cs-modal-body">
-                <span class="cs-confirm-icon"><i class="bi bi-arrow-left-right" aria-hidden="true"></i></span>
-                <h2 id="statusTitle">Change the status</h2>
-                <p class="cs-muted" id="statusText">Choose the new status. The resident will be notified.</p>
-
-                <fieldset class="rp-status-options">
-                    <legend class="cs-label">New status</legend>
-                    <label class="rp-status-option is-resolved">
-                        <input type="radio" name="newStatus" value="STAT003">
-                        <span>
-                            <strong><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Resolved</strong>
-                            <small>The problem has been fixed. This closes the report.</small>
-                        </span>
-                    </label>
-                    <label class="rp-status-option is-rejected">
-                        <input type="radio" name="newStatus" value="rejected">
-                        <span>
-                            <strong><i class="bi bi-x-circle-fill" aria-hidden="true"></i> Rejected</strong>
-                            <small>The barangay will not act on this report. A reason is required.</small>
-                        </span>
-                    </label>
-                    <label class="rp-status-option is-pending">
-                        <input type="radio" name="newStatus" value="STAT001">
-                        <span>
-                            <strong><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Back to New</strong>
-                            <small>Accepted by mistake? Move it back to Pending to review it again.</small>
-                        </span>
-                    </label>
-                </fieldset>
-
-                <div class="rp-status-reasons" id="statusReasons" hidden>
-                    <span class="cs-label">Quick reasons</span>
-                    <div class="rp-chip-row">
-                        <?php foreach ([
-                            "This problem was already reported.",
-                            "The location is outside our barangay.",
-                            "This is not a problem the barangay handles.",
-                            "After checking the site, we found no problem.",
-                        ] as $reason): ?>
-                            <button type="button" class="rp-chip" data-reason="<?= csEscape($reason) ?>"><?= csEscape($reason) ?></button>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-
-                <div class="cs-field">
-                    <label class="cs-label" for="statusMessage" id="statusMessageLabel">Message to the resident <span class="cs-subtle">(optional)</span></label>
-                    <textarea id="statusMessage" class="cs-textarea" rows="3" maxlength="1000"></textarea>
-                </div>
-            </div>
-            <div class="cs-modal-footer">
-                <button type="button" class="cs-btn cs-btn-ghost" data-modal-close>Cancel</button>
-                <button type="submit" class="cs-btn cs-btn-primary" id="statusSubmit">
-                    <i class="bi bi-check-lg" aria-hidden="true"></i> Save Status
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
+<?php include __DIR__ . "/partial/report_drawer.php"; ?>
 
 <!-- DOWNLOAD SUMMARY -->
 <div class="cs-modal" id="downloadReportModal" role="dialog" aria-modal="true" aria-labelledby="downloadTitle">
@@ -906,11 +606,10 @@ include __DIR__ . "/partial/head.php";
     </div>
 </div>
 
-<script type="application/json" id="reportPayload"><?= $payloadJSON ?: "{}" ?></script>
+<script type="application/json" id="reportPayload"><?= $payloadJSON ?></script>
 
 <?php include __DIR__ . "/partial/scripts.php"; ?>
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="../js/reports.js?v=<?= $csAssetVersion ?>.1"></script>
+<?php include __DIR__ . "/partial/report_drawer_scripts.php"; ?>
 
 </body>
 </html>

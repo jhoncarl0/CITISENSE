@@ -139,11 +139,12 @@ try {
             "success" => true,
             "mainID" => $usedMain,
             "message" => "Report " . $reportID . " is now linked to report " . $usedMain
-                . " and has the same status. It will follow every update of report " . $usedMain . ".",
+                . " and has the same status. It will follow every update of report " . $usedMain . "."
+                . " You can find it in the View of report " . $usedMain . " on the Reports page.",
         ]);
     }
 
-    $now = date("Y-m-d H:i:s");
+    $now = csDbNow();
     $conn->begin_transaction();
 
     foreach ($otherIDs as $otherID) {

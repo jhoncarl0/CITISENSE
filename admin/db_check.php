@@ -48,6 +48,29 @@ dbCheck($checks, "Database server", function () use ($conn) {
     return $row["v"] . " · database `" . $row["d"] . "` · connection collation " . $row["c"];
 });
 
+dbCheck($checks, "Time zones (stored vs. shown)", function () use ($conn, $barangayID) {
+    $db = $conn->query("SELECT NOW() AS dbNow, UTC_TIMESTAMP() AS utcNow, @@session.time_zone AS tz")->fetch_assoc();
+    $stmt = $conn->prepare("SELECT reportID, dateReported FROM reports WHERE barangayID = ? ORDER BY dateReported DESC LIMIT 1");
+    $stmt->bind_param("s", $barangayID);
+    $stmt->execute();
+    $latest = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    $text = "Stored in " . CS_DB_TIMEZONE . ", shown in " . CS_DISPLAY_TIMEZONE
+        . " · now shown as " . date("M j, Y g:i A")
+        . " · database clock (session " . $db["tz"] . ") " . $db["dbNow"] . ", UTC " . $db["utcNow"];
+    if ($latest) {
+        $text .= " · newest report " . $latest["reportID"] . ": stored " . $latest["dateReported"]
+            . ", shown " . csDate($latest["dateReported"], "M j, Y g:i A") . " (" . csTimeAgo($latest["dateReported"]) . ")";
+        // A report "in the future" means the stored zone is set wrong.
+        $stamp = csFromDb($latest["dateReported"]);
+        if ($stamp && $stamp->getTimestamp() > time() + 600) {
+            throw new RuntimeException($text . ". The newest report appears to be in the future: the mobile API probably saves Philippine time. Set the environment variable CS_DB_TIMEZONE=Asia/Manila (see config/timezone.php).");
+        }
+    }
+    return $text . ". If a report you just sent shows the wrong time, compare it with your clock and see config/timezone.php.";
+});
+
 dbCheck($checks, "GD picture library (resizing pictures, photo comparison)", function () {
     if (!function_exists("imagecreatefromjpeg") || !function_exists("imagecreatefrompng")) {
         throw new RuntimeException("GD is not enabled. In XAMPP, open php.ini, remove the ; before extension=gd, then restart Apache.");

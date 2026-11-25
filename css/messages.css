@@ -568,6 +568,17 @@
     font-weight: 600;
 }
 
+.msg-about .cs-dropdown {
+    width: auto;
+    min-width: 220px;
+    max-width: 340px;
+}
+
+.msg-about .cs-dropdown .cs-select {
+    width: 100%;
+    max-width: none;
+}
+
 .msg-about .cs-select {
     width: auto;
     max-width: 340px;
@@ -770,6 +781,7 @@ a.msg-quote:hover {
 
 @media (max-width: 640px) {
     .msg-about,
+    .msg-about .cs-dropdown,
     .msg-about .cs-select {
         width: 100%;
         max-width: none;
